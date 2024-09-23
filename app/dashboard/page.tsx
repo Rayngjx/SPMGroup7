@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ApprovedDatesTable from '@/components/dashboard/approvedDatesTable';
-// import AnimatedToast from '@/components/test';
+import WFHCalendar from '@/components/test';
 
 export default async function page() {
   let getUsers;
@@ -171,8 +171,8 @@ export default async function page() {
             </div>
           </TabsContent>
           <TabsContent value="analytics" className="space-y-4">
-            {/* <AnimatedToast/> */}
-            <ApprovedDatesTable />
+            <WFHCalendar />
+            {/* <ApprovedDatesTable /> */}
           </TabsContent>
         </Tabs>
       </div>
