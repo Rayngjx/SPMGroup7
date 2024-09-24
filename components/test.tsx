@@ -37,6 +37,12 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+import {
+  deleteApproveDates,
+  getApprovedDates
+} from '@/prisma/crudFunctions/ApprovedDates';
+import { approved_dates } from '@prisma/client';
+
 type Department = 'Engineering' | 'Marketing' | 'Sales' | 'HR' | 'Finance';
 
 const departments: Department[] = [
@@ -128,7 +134,36 @@ export default function WFHCalendar() {
       {} as Record<Department, number>
     );
   }, []);
+  const [approvedDates, setApprovedDates] = useState<approved_dates[]>([]);
 
+  useEffect(() => {
+    const fetchDates = async () => {
+      try {
+        const response = await getApprovedDates();
+        console.log(response);
+        if (!response) {
+          throw new Error('Error fetching users');
+        }
+        // const data = await response.json();
+
+        // Assuming response is in the format provided in the example
+        const formattedData = response.map((item: any) => ({
+          staff_id: item.staff_id,
+          request_id: item.request_id,
+          date: item.date // Formatting the date for display
+        }));
+
+        // Update state with the formatted data
+        setApprovedDates(formattedData);
+        console.log(formattedData);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+      }
+    };
+
+    fetchDates();
+  }, []);
   useEffect(() => {
     const filteredData = dummyData.filter((employee) =>
       selectedDepartments.includes(employee.department)
