@@ -39,7 +39,8 @@ import { cn } from '@/lib/utils';
 
 import {
   deleteApproveDates,
-  getApprovedDates
+  getApprovedDates,
+  getApprovedDatesWithUserDetails
 } from '@/prisma/crudFunctions/ApprovedDates';
 import { approved_dates } from '@prisma/client';
 

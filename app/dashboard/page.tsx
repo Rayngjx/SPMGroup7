@@ -20,8 +20,25 @@ import WFHCalendar from '@/components/test';
 export default async function page() {
   let getUsers;
   try {
-    getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
-    console.log(getUsers);
+    // getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
+    // console.log(getUsers);
+    const response = await db.approved_dates.findMany({
+      select: {
+        staff_id: true,
+        request_id: true,
+        date: true,
+        users: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            dept_id: true,
+            position: true,
+            email: true
+          }
+        }
+      }
+    });
+    console.log(response);
   } catch (error) {
     console.error(error);
   }

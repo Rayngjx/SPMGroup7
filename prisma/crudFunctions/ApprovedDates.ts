@@ -99,3 +99,24 @@ export async function deleteApproveDates(payload: ApprovedDatesPayload) {
   });
   return response ? { success: true } : { success: false, error: 'Failed!' };
 }
+
+export async function getApprovedDatesWithUserDetails() {
+  const response = await db.approved_dates.findMany({
+    select: {
+      staff_id: true,
+      request_id: true,
+      date: true,
+      users: {
+        select: {
+          staff_fname: true,
+          staff_lname: true,
+          dept_id: true,
+          position: true,
+          email: true
+        }
+      }
+    }
+  });
+  console.log('test');
+  console.log('response detail ', response);
+}
