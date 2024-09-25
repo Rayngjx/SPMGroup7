@@ -15,30 +15,15 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ApprovedDatesTable from '@/components/dashboard/approvedDatesTable';
-import WFHCalendar from '@/components/test';
+import WFHCalendar from '@/components/dashboard/overviewcalendar/overviewcalendar';
 
 export default async function page() {
   let getUsers;
   try {
-    // getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
-    // console.log(getUsers);
-    const response = await db.approved_dates.findMany({
-      select: {
-        staff_id: true,
-        request_id: true,
-        date: true,
-        users: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            dept_id: true,
-            position: true,
-            email: true
-          }
-        }
-      }
-    });
-    // console.log(response)
+    getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
+    console.log(getUsers);
+
+    // console.log(response
   } catch (error) {
     console.error(error);
   }
