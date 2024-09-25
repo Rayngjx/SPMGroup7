@@ -38,7 +38,7 @@ export default async function page() {
         }
       }
     });
-    console.log(response);
+    // console.log(response)
   } catch (error) {
     console.error(error);
   }

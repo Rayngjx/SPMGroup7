@@ -6,6 +6,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { db } from '@/lib/db';
 import {
   Popover,
   PopoverContent,
@@ -41,8 +42,9 @@ import {
   deleteApproveDates,
   getApprovedDates,
   getApprovedDatesWithUserDetails
-} from '@/prisma/crudFunctions/ApprovedDates';
+} from '@/app/api/crudFunctions/ApprovedDates';
 import { approved_dates } from '@prisma/client';
+import { SelectPortal } from '@radix-ui/react-select';
 
 type Department = 'Engineering' | 'Marketing' | 'Sales' | 'HR' | 'Finance';
 
@@ -136,12 +138,43 @@ export default function WFHCalendar() {
     );
   }, []);
   const [approvedDates, setApprovedDates] = useState<approved_dates[]>([]);
+  const [approvedDateswithDetails, setApprovedDateswithDetails] = useState<
+    approved_dates[]
+  >([]);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const response = await getApprovedDatesWithUserDetails();
+        if (!response) {
+          throw new Error('Error fetching users');
+        }
+        // const data = await response.json();
+
+        // Assuming response is in the format provided in the example
+        const formattedData = response.map((item: any) => ({
+          staff_id: item.staff_id,
+          request_id: item.request_id,
+          date: item.date // Formatting the date for display
+        }));
+
+        // Update state with the formatted data
+        setApprovedDateswithDetails(formattedData); // update State, retreive data using approvedDateswithDetails
+        console.log(formattedData);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+      }
+    };
+
+    fetchDetails();
+  }, []);
 
   useEffect(() => {
     const fetchDates = async () => {
       try {
         const response = await getApprovedDates();
-        console.log(response);
+        // console.log(response);
         if (!response) {
           throw new Error('Error fetching users');
         }
@@ -156,7 +189,7 @@ export default function WFHCalendar() {
 
         // Update state with the formatted data
         setApprovedDates(formattedData);
-        console.log(formattedData);
+        // console.log(formattedData);
       } catch (error) {
         console.error('Error:', error);
       } finally {

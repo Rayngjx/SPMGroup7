@@ -101,22 +101,29 @@ export async function deleteApproveDates(payload: ApprovedDatesPayload) {
 }
 
 export async function getApprovedDatesWithUserDetails() {
-  const response = await db.approved_dates.findMany({
-    select: {
-      staff_id: true,
-      request_id: true,
-      date: true,
-      users: {
-        select: {
-          staff_fname: true,
-          staff_lname: true,
-          dept_id: true,
-          position: true,
-          email: true
+  try {
+    // const response = await db.approved_dates.findMany();
+    const response = await db.approved_dates.findMany({
+      select: {
+        staff_id: true,
+        request_id: true,
+        date: true,
+        users: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            dept_id: true,
+            position: true,
+            email: true
+          }
         }
       }
-    }
-  });
-  console.log('test');
-  console.log('response detail ', response);
+    });
+    console.log(response);
+    return response;
+    console.log('approvedDates');
+    console.log('response detail', response);
+  } catch (error) {
+    console.error('Error fetching approved dates:', error);
+  }
 }
