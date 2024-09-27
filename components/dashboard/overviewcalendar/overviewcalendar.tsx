@@ -42,7 +42,7 @@ import {
   deleteApproveDates,
   getApprovedDates,
   getApprovedDatesWithUserDetails
-} from '@/app/api/crudFunctions/ApprovedDates';
+} from '@/lib/crudFunctions/ApprovedDates';
 import { approved_dates } from '@prisma/client';
 import { SelectPortal } from '@radix-ui/react-select';
 
