@@ -15,9 +15,9 @@ interface UpdateUserPayload {
 }
 
 // Function to get a specific user by staff_id
-export async function getUser(payload: UpdateUserPayload) {
+export async function getUser({ staff_id }: { staff_id: number }) {
   const response = await db.users.findMany({
-    where: { staff_id: payload.staff_id }
+    where: { staff_id }
   });
   return response ? response : null;
 }
@@ -69,11 +69,9 @@ export async function updateUser(payload: UpdateUserPayload) {
 }
 
 // Function to delete a user by staff_id
-export async function deleteUser(payload: UpdateUserPayload) {
+export async function deleteUser({ staff_id }: { staff_id: number }) {
   const response = await db.users.delete({
-    where: {
-      staff_id: payload.staff_id
-    }
+    where: { staff_id }
   });
   return response ? { success: true } : { success: false, error: 'Failed!' };
 }
