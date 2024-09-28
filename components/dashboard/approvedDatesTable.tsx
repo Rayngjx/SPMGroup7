@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import {
   deleteApproveDates,
   getApprovedDates
-} from '@/app/api/ApprovedDates/ApprovedDates';
+} from '@/lib/crudFunctions/ApprovedDates';
 import { approved_dates } from '@prisma/client';
 import { date } from 'zod';
 import { Button } from '@/components/ui/button';
