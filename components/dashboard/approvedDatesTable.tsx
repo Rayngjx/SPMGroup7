@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/db';
 import {
   deleteApproveDates,
-  getApprovedDates,
-  getStaffInDepartment
-} from '@/lib/crudFunctions/ApprovedDates'; // Make sure this is the correct path
+  getApprovedDates
+} from '@/lib/crudFunctions/ApprovedDates';
 import { approved_dates } from '@prisma/client';
+import { date } from 'zod';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
@@ -48,65 +48,96 @@ export default function ApprovedDatesTable() {
     pendingRequests: 4,
     daysPerYear: 25,
     daysUpcoming: 0,
-    requestedTimeOff: [],
-    timeOffHistory: [],
-    timeOffRequests: []
+    requestedTimeOff: [
+      {
+        type: 'Sick',
+        dateFrom: '18/01/2020',
+        dateTo: '18/01/2020',
+        duration: '11 hours',
+        action: 'Declined'
+      },
+      {
+        type: 'Time off',
+        dateFrom: '15/03/2020',
+        dateTo: '15/03/2020',
+        duration: '48 hours',
+        action: 'Accepted'
+      },
+      {
+        type: 'Holiday',
+        dateFrom: '28/04/2020',
+        dateTo: '28/04/2020',
+        duration: '12 hours',
+        action: 'Requested'
+      }
+    ],
+    timeOffHistory: [
+      { month: 'Jan', days: 2 },
+      { month: 'Feb', days: 4 },
+      { month: 'Mar', days: 7 }
+    ],
+    timeOffRequests: [
+      {
+        type: 'Holiday',
+        dateFrom: '12/02/2020',
+        dateTo: '12/02/2020',
+        duration: '13 hours'
+      },
+      {
+        type: 'Sick',
+        dateFrom: '18/04/2020',
+        dateTo: '18/04/2020',
+        duration: '24 hours'
+      },
+      {
+        type: 'Family Time',
+        dateFrom: '22/05/2020',
+        dateTo: '22/05/2020',
+        duration: '17 hours'
+      }
+    ]
   });
 
+  // useEffect( () => {
+  //   // Fetch leave information from the server
+  //   const getUsers = await db.users.findMany({ where: { staff_id: 130002 }
+  //   })
+  //   console.log(getUsers)
+  // }, []);
   const [approvedDates, setApprovedDates] = useState<approved_dates[]>([]);
-  const [staffInDepartment, setStaffInDepartment] = useState<any[]>([]);
   const router = useRouter();
 
-  // Fetch approved dates
   useEffect(() => {
-    const fetchApprovedDates = async () => {
+    const fetchUsers = async () => {
       try {
         const response = await getApprovedDates();
-
-        // Check if the response is defined and is an array
-        if (response && Array.isArray(response)) {
-          const formattedData = response.map((item: any) => ({
-            staff_id: item.staff_id,
-            request_id: item.request_id,
-            date: item.date
-          }));
-          setApprovedDates(formattedData);
-        } else {
-          console.warn('No approved dates found or response is not an array.');
+        console.log(response);
+        if (!response) {
+          throw new Error('Error fetching users');
         }
+        // const data = await response.json();
+
+        // Assuming response is in the format provided in the example
+        const formattedData = response.map((item: any) => ({
+          staff_id: item.staff_id,
+          request_id: item.request_id,
+          date: item.date // Formatting the date for display
+        }));
+
+        // Update state with the formatted data
+        setApprovedDates(formattedData);
       } catch (error) {
-        console.error('Error fetching approved dates:', error);
+        console.error('Error:', error);
+      } finally {
       }
     };
 
-    fetchApprovedDates();
-  }, []);
-
-  // Fetch staff in the same department
-  useEffect(() => {
-    const fetchStaffInDepartment = async () => {
-      try {
-        const userId = 130002; // Replace with actual user ID
-        const staff = await getStaffInDepartment(userId);
-
-        // Check if the staff response is defined and is an array
-        if (staff && Array.isArray(staff)) {
-          setStaffInDepartment(staff);
-        } else {
-          console.warn(
-            'No staff found in department or response is not an array.'
-          );
-        }
-      } catch (error) {
-        console.error('Error fetching staff in department:', error);
-      }
-    };
-
-    fetchStaffInDepartment();
+    fetchUsers();
   }, []);
 
   const handleButtonClick = async (data: any) => {
     const deleteRes = await deleteApproveDates(data);
+
     console.log(deleteRes);
     router.refresh();
     return deleteRes;
@@ -121,7 +152,6 @@ export default function ApprovedDatesTable() {
             <th>Staff ID</th>
             <th>Request ID</th>
             <th>Date</th>
-            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -142,15 +172,6 @@ export default function ApprovedDatesTable() {
           ))}
         </tbody>
       </table>
-
-      <h3>Staff In Your Department</h3>
-      <ul>
-        {staffInDepartment.map((staff) => (
-          <li key={staff.staff_id}>
-            {staff.staff_fname} {staff.staff_lname}
-          </li>
-        ))}
-      </ul>
     </>
   );
 }

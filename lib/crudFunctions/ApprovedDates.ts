@@ -1,111 +1,129 @@
 'use server';
 import { db } from '@/lib/db';
-import { ApprovedDate, DatabaseApprovedDate } from '@/types/approvedDate';
 
+interface ApprovedDatesPayload {
+  staff_id: number;
+  request_id: number;
+  date: string; // Use string for date, convert later to Date object
+}
+
+// Get all approved dates
 export async function getApprovedDates() {
   const response = await db.approved_dates.findMany();
-  if (response) return response;
+  return response ? response : null;
 }
 
-export async function createApproveDates(payload: any) {
-  const response = await db.approved_dates.create({
-    data: payload
+// Get approved dates of user
+export async function getUserApprovedDates(userStaffId: number) {
+  const response = await db.approved_dates.findMany({
+    where: { staff_id: userStaffId }
   });
-  if (response) return { success: true };
-  return { success: false, error: 'Failed!' };
+  return response ? response : null;
+}
+//Get approved dates of team members
+export async function getTeamApprovedDates(teamleadId: number) {
+  // Find all staff_ids where reporting_manager is teamleadId
+  const teamMembers = await db.users.findMany({
+    where: { reporting_manager: teamleadId },
+    select: { staff_id: true }
+  });
+
+  const staffIds = teamMembers.map((member) => member.staff_id);
+
+  // Pull all approved dates for those staff_ids
+  const approvedDates = await db.approved_dates.findMany({
+    where: {
+      staff_id: { in: staffIds }
+    }
+  });
+
+  return approvedDates.length > 0 ? approvedDates : null;
 }
 
-export async function updateApproveDates(payload: any) {
+// Get approved dates of department
+export async function getDpmtApprovedDates(deptId: number) {
+  // Find all users with dept_id equal to deptId
+  const departmentMembers = await db.users.findMany({
+    where: { dept_id: deptId },
+    select: { staff_id: true }
+  });
+
+  const staffIds = departmentMembers.map((member) => member.staff_id);
+
+  // Get approved dates for those staff_ids
+  const approvedDates = await db.approved_dates.findMany({
+    where: {
+      staff_id: { in: staffIds }
+    }
+  });
+
+  return approvedDates.length > 0 ? approvedDates : null;
+}
+
+// Create approved dates entry
+export async function createApproveDates(payload: ApprovedDatesPayload) {
+  const response = await db.approved_dates.create({
+    data: {
+      ...payload,
+      date: new Date(payload.date) // Ensure date is stored as a Date object
+    }
+  });
+  return response ? { success: true } : { success: false, error: 'Failed!' };
+}
+
+// Update approved dates entry
+export async function updateApproveDates(payload: ApprovedDatesPayload) {
   const response = await db.approved_dates.update({
     where: {
       staff_id_request_id_date: {
         staff_id: payload.staff_id,
         request_id: payload.request_id,
-        date: new Date(payload.date) // Ensure date is a Date object
+        date: new Date(payload.date) // Convert to Date object
       }
     },
-    data: payload // Only update non-key fields
+    data: payload // Update non-key fields if applicable
   });
-  if (response) return { success: true };
-  return { success: false, error: 'Failed!' };
+  return response ? { success: true } : { success: false, error: 'Failed!' };
 }
 
-export async function deleteApproveDates(payload: any) {
+// Delete approved dates entry
+export async function deleteApproveDates(payload: ApprovedDatesPayload) {
   const response = await db.approved_dates.delete({
     where: {
       staff_id_request_id_date: {
         staff_id: payload.staff_id,
         request_id: payload.request_id,
-        date: new Date(payload.date) // Ensure date is a Date object
+        date: new Date(payload.date) // Ensure date is handled as a Date object
       }
     }
   });
-  if (response) return { success: true };
-  return { success: false, error: 'Failed!' };
+  return response ? { success: true } : { success: false, error: 'Failed!' };
 }
 
-// Annette : Function to get the department for the logged-in user and their staff
-export const getStaffInDepartment = async (userId: number) => {
+export async function getApprovedDatesWithUserDetails() {
   try {
-    // First, find the user's reporting manager
-    const user = await db.users.findUnique({
-      where: { staff_id: userId },
-      select: { reporting_manager: true, dept_id: true } // Get the reporting manager and department ID
-    });
-
-    if (!user || !user.reporting_manager) {
-      throw new Error('User or reporting manager not found');
-    }
-
-    // Now find staff who report to this manager
-    const staffInDepartment = await db.users.findMany({
-      where: { reporting_manager: user.reporting_manager },
+    // const response = await db.approved_dates.findMany();
+    const response = await db.approved_dates.findMany({
       select: {
         staff_id: true,
-        staff_fname: true,
-        staff_lname: true // Assuming you have first and last name fields
-        // Include any other fields you want
-      }
-    });
-
-    return staffInDepartment; // Return the staff list
-  } catch (error) {
-    console.error('Error fetching staff in department:', error);
-    throw error; // Rethrow the error to handle it in the calling function
-  }
-};
-
-export async function getApprovedDatesWithUserDetails(): Promise<
-  ApprovedDate[]
-> {
-  try {
-    const response = await db.approved_dates.findMany({
-      include: {
+        request_id: true,
+        date: true,
         users: {
           select: {
-            staff_id: true,
             staff_fname: true,
             staff_lname: true,
             dept_id: true,
             position: true,
-            email: true,
-            reporting_manager: true
+            email: true
           }
         }
       }
     });
-
-    // Convert the database result to our ApprovedDate type
-    const convertedResponse: ApprovedDate[] = response.map(
-      (item: DatabaseApprovedDate) => ({
-        ...item,
-        date: item.date.toISOString().split('T')[0] // Convert Date to 'YYYY-MM-DD' string
-      })
-    );
-
-    return convertedResponse;
+    console.log(response);
+    return response;
+    console.log('approvedDates');
+    console.log('response detail', response);
   } catch (error) {
     console.error('Error fetching approved dates:', error);
-    throw error;
   }
 }
