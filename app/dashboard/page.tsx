@@ -44,9 +44,12 @@ export default async function page() {
 
   let staffId = 'User';
   let staff_fname = 'User';
+  let role_id = 'User';
+
   if (session?.user?.id) {
     staffId = String(session.user.staff_id);
     staff_fname = String(session.user.staff_fname); // Set staffId from the session object
+    role_id = String(session.user.role_id);
   }
 
   return (
@@ -54,7 +57,7 @@ export default async function page() {
       <div className="space-y-2">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-2xl font-bold tracking-tight">
-            Hi, Welcome back {staff_fname} ({staffId})
+            Hi, Welcome back {staff_fname} ({staffId}) {role_id}
           </h2>
 
           <div className="hidden items-center space-x-2 md:flex">

@@ -43,6 +43,7 @@ export const authConfig = {
         token.id = user.id;
         token.staff_id = user.staff_id; // Add staff_id to the JWT token
         token.staff_fname = user.staff_fname;
+        token.role_id = user.role_id;
       }
       return token;
     },
@@ -55,6 +56,7 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.staff_id = token.staff_id as number; // Assign staff_id from token to session.user
         session.user.staff_fname = token.staff_fname as string;
+        session.user.role_id = token.role_id as number;
       }
 
       console.log('Session after modification:', session); // Debug session after assignment
