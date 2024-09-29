@@ -16,17 +16,44 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ApprovedDatesTable from '@/components/dashboard/approvedDatesTable';
 import WFHCalendar from '@/components/dashboard/overviewcalendar/overviewcalendar';
+import { useEffect, useState } from 'react';
+import { NextResponse } from 'next/server';
 
 export default async function page() {
-  let getUsers;
-  try {
-    getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
-    console.log(getUsers);
+  let users = [];
+  let error = null;
 
-    // console.log(response
-  } catch (error) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/all`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch users');
+    }
+
+    users = await response.json();
+    console.log(users);
+  } catch (err) {
+    error = err.message;
     console.error(error);
   }
+
+  // let getUsers;
+  // try {
+  //   getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
+  //   console.log(getUsers);
+
+  //   // console.log(response
+  // } catch (error) {
+  //   console.error(error);
+  // }
   return (
     <PageContainer scrollable={true}>
       <div className="space-y-2">
