@@ -18,6 +18,8 @@ import ApprovedDatesTable from '@/components/dashboard/approvedDatesTable';
 import WFHCalendar from '@/components/dashboard/overviewcalendar/overviewcalendar';
 import { auth } from '@/auth';
 import authConfig from '@/auth.config';
+import { useEffect, useState } from 'react';
+import { NextResponse } from 'next/server';
 
 export default async function page() {
   const session = await auth();
@@ -52,6 +54,40 @@ export default async function page() {
     role_id = String(session.user.role_id);
   }
 
+  let users = [];
+  let error = null;
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/all`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch users');
+    }
+
+    users = await response.json();
+    console.log(users);
+  } catch (err) {
+    error = err.message;
+    console.error(error);
+  }
+
+  // let getUsers;
+  // try {
+  //   getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
+  //   console.log(getUsers);
+
+  //   // console.log(response
+  // } catch (error) {
+  //   console.error(error);
+  // }
   return (
     <PageContainer scrollable={true}>
       <div className="space-y-2">

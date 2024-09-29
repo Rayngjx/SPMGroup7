@@ -198,21 +198,22 @@ export default function WFHCalendar() {
 
     fetchDates();
   }, []);
+
   useEffect(() => {
     const filteredData = dummyData.filter((employee) =>
       selectedDepartments.includes(employee.department)
     );
-    const groupedEvents = filteredData.reduce(
-      (acc, employee) => {
-        const dateStr = employee.wfhDate;
-        if (!acc[dateStr]) acc[dateStr] = {};
-        if (!acc[dateStr][employee.department])
-          acc[dateStr][employee.department] = [];
-        acc[dateStr][employee.department].push(employee);
-        return acc;
-      },
-      {} as Record<string, Partial<Record<Department, Employee[]>>>
-    );
+    const groupedEvents = filteredData.reduce<
+      Record<string, Partial<Record<Department, Employee[]>>>
+    >((acc, employee) => {
+      const dateStr = employee.wfhDate;
+      if (!acc[dateStr]) acc[dateStr] = {};
+      if (!acc[dateStr][employee.department]) {
+        acc[dateStr][employee.department] = [];
+      }
+      acc[dateStr][employee.department]?.push(employee);
+      return acc;
+    }, {});
 
     const formattedEvents = Object.entries(groupedEvents).flatMap(
       ([date, departments]) =>
