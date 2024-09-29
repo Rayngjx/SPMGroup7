@@ -107,7 +107,8 @@ export default function WFHCalendar() {
   const [dialogContent, setDialogContent] = useState<{
     title: string;
     employees: Employee[];
-  }>({ title: '', employees: [] });
+    presentEmployees: AllUserDetails[];
+  }>({ title: '', employees: [], presentEmployees: [] });
   const [visibleColumns, setVisibleColumns] = useState<ColumnKey[]>(
     allColumns.map((col) => col.key)
   );
@@ -120,6 +121,13 @@ export default function WFHCalendar() {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [presentEmployees, setPresentEmployees] = useState<AllUserDetails[]>(
+    []
+  );
+  const [currentOfficePage, setCurrentOfficePage] = useState(1);
+  const [currentWfhPage, setCurrentWfhPage] = useState(1);
+  const [currentPresentPage, setCurrentPresentPage] = useState(1);
+  const employeesPerPage = 10;
 
   useEffect(() => {
     const fetchAllUserDetails = async () => {
@@ -230,6 +238,28 @@ export default function WFHCalendar() {
     return filteredData;
   };
 
+  const getPresentEmployees = (date: Date, deptId: number) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const wfhEmployees = new Set(
+      staffDetails
+        .filter(
+          (employee) => employee.date === dateStr && employee.dept_id === deptId
+        )
+        .map((employee) => employee.staff_id)
+    );
+
+    return allUserDetails.filter(
+      (employee) =>
+        !wfhEmployees.has(employee.staff_id) && employee.dept_id === deptId
+    );
+  };
+
+  useEffect(() => {
+    const filteredData = updateStaffDetails(selectedDate);
+    const presentData = getPresentEmployees(selectedDate, 1); // Default to Department 1
+    setPresentEmployees(presentData);
+  }, [selectedDate, staffDetails, selectedDepartments, allUserDetails]);
+
   const toggleDepartment = (deptId: number) => {
     setSelectedDepartments((prev) =>
       prev.includes(deptId)
@@ -240,14 +270,22 @@ export default function WFHCalendar() {
 
   const handleEventClick = (info: any) => {
     const { department, employees } = info.event.extendedProps;
+    const deptId = departments.indexOf(department) + 1;
+    const presentEmployees = getPresentEmployees(
+      new Date(info.event.start),
+      deptId
+    );
     setDialogContent({
       title: `${department} - ${format(
         new Date(info.event.start),
         'MMMM d, yyyy'
       )}`,
-      employees
+      employees,
+      presentEmployees
     });
     setIsDialogOpen(true);
+    setCurrentWfhPage(1);
+    setCurrentPresentPage(1);
   };
 
   const toggleColumn = (columnKey: ColumnKey) => {
@@ -563,31 +601,149 @@ export default function WFHCalendar() {
           </div>
         </CardContent>
       </Card>
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{dialogContent.title}</DialogTitle>
-            <DialogDescription>Employees working from home:</DialogDescription>
+            <DialogDescription>Department Overview</DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Reason</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dialogContent.employees.map((employee) => (
-                  <TableRow key={employee.staff_id}>
-                    <TableCell>{`${employee.staff_fname} ${employee.staff_lname}`}</TableCell>
-                    <TableCell>{employee.position}</TableCell>
-                    <TableCell>{employee.reason}</TableCell>
+          <div className="mt-4 space-y-6">
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">
+                Employees Working From Home
+              </h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Reason</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {dialogContent.employees
+                    .slice(
+                      (currentWfhPage - 1) * employeesPerPage,
+                      currentWfhPage * employeesPerPage
+                    )
+                    .map((employee) => (
+                      <TableRow key={employee.staff_id}>
+                        <TableCell>{`${employee.staff_fname} ${employee.staff_lname}`}</TableCell>
+                        <TableCell>{employee.position}</TableCell>
+                        <TableCell>{employee.reason}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify-between space-x-2 py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentWfhPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentWfhPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentWfhPage} of{' '}
+                  {Math.ceil(dialogContent.employees.length / employeesPerPage)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentWfhPage((prev) =>
+                      Math.min(
+                        prev + 1,
+                        Math.ceil(
+                          dialogContent.employees.length / employeesPerPage
+                        )
+                      )
+                    )
+                  }
+                  disabled={
+                    currentWfhPage ===
+                    Math.ceil(dialogContent.employees.length / employeesPerPage)
+                  }
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">
+                Employees Present in Office
+              </h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Position</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dialogContent.presentEmployees
+                    .slice(
+                      (currentPresentPage - 1) * employeesPerPage,
+                      currentPresentPage * employeesPerPage
+                    )
+                    .map((employee) => (
+                      <TableRow key={employee.staff_id}>
+                        <TableCell>{`${employee.staff_fname} ${employee.staff_lname}`}</TableCell>
+                        <TableCell>{employee.position}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify-between space-x-2 py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPresentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPresentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPresentPage} of{' '}
+                  {Math.ceil(
+                    dialogContent.presentEmployees.length / employeesPerPage
+                  )}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPresentPage((prev) =>
+                      Math.min(
+                        prev + 1,
+                        Math.ceil(
+                          dialogContent.presentEmployees.length /
+                            employeesPerPage
+                        )
+                      )
+                    )
+                  }
+                  disabled={
+                    currentPresentPage ===
+                    Math.ceil(
+                      dialogContent.presentEmployees.length / employeesPerPage
+                    )
+                  }
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
