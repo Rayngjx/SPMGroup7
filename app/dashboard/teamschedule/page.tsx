@@ -1,8 +1,7 @@
-import { Suspense } from 'react';
+'use client';
+import { useEffect, useState, Suspense } from 'react';
+import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 
 const TeamScheduleCalendar = dynamic(
   () => import('@/components/dashboard/staffTeamSchedule/EnhancedWFHCalendar'),
@@ -12,75 +11,93 @@ const TeamScheduleCalendar = dynamic(
   }
 );
 
-async function getStaffData(userId: number) {
-  // In a real application, you would fetch this data from your database
-  // For this example, we'll use mock data
-  const mockStaffData = [
-    {
-      id: 1,
-      name: 'Susan Goh',
-      position: 'Account Manager',
-      reportingManager: 101,
-      wfhDates: ['2024-09-30', '2024-10-01', '2024-10-02']
-    },
-    {
-      id: 2,
-      name: 'Oliva Lim',
-      position: 'Account Manager',
-      reportingManager: 101,
-      wfhDates: ['2024-10-02', '2024-10-03', '2024-10-04']
-    },
-    {
-      id: 3,
-      name: 'Emma Heng',
-      position: 'Account Manager',
-      reportingManager: 101,
-      wfhDates: ['2024-10-04', '2024-10-05', '2024-10-06']
-    },
-    {
-      id: 4,
-      name: 'Eva Yong',
-      position: 'Account Manager',
-      reportingManager: 102,
-      wfhDates: ['2024-09-30', '2024-10-01', '2024-10-02']
-    },
-    {
-      id: 5,
-      name: 'Charlotte Wong',
-      position: 'Account Manager',
-      reportingManager: 102,
-      wfhDates: ['2024-10-02', '2024-10-03', '2024-10-04']
-    },
-    {
-      id: 6,
-      name: 'Noah Ng',
-      position: 'Account Manager',
-      reportingManager: 102,
-      wfhDates: ['2024-10-04', '2024-10-05', '2024-10-06']
-    }
-  ];
-
-  const currentUser = mockStaffData.find((staff) => staff.id === userId);
-  if (!currentUser) {
-    throw new Error('User not found');
-  }
-
-  const departmentStaff = mockStaffData.filter(
-    (staff) => staff.reportingManager === currentUser.reportingManager
+async function getApprovedDates(teamLeadId: number) {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/approved-dates/team/${teamLeadId}`
   );
-  return { currentUser, departmentStaff };
+  if (!response.ok) {
+    throw new Error('Failed to fetch approved dates');
+  }
+  return response.json();
 }
 
-export default async function TeamSchedulePage() {
-  const { currentUser, departmentStaff } = await getStaffData(1); // Assuming current user has ID 1
+async function getUserDetails(staffId: number) {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/${staffId}`
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch user details');
+  }
+
+  return response.json();
+}
+
+export default function TeamSchedulePage() {
+  const { data: session } = useSession();
+
+  if (!session) {
+    return <p>Please log in to see your team schedule.</p>;
+  }
+
+  const reportingManagerId = session.user.reporting_manager; // Get the reporting manager ID
+  const [departmentStaff, setDepartmentStaff] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTeamData() {
+      try {
+        const approvedDates =
+          reportingManagerId !== null
+            ? await getApprovedDates(reportingManagerId)
+            : [];
+
+        // Collect unique staff IDs from approved dates
+        const staffIds = [
+          ...new Set(approvedDates.map((date) => date.staff_id))
+        ];
+
+        // Fetch user details for each staff member
+        const userDetailsPromises = staffIds.map((id) => getUserDetails(id));
+        const usersDetails = await Promise.all(userDetailsPromises);
+
+        // Map user details with their approved dates
+        const formattedDepartmentStaff = usersDetails.map((user) => {
+          const userApprovedDates = approvedDates
+            .filter((date) => date.staff_id === user.staff_id)
+            .map((date) => date.date); // Assuming 'date' is the approved date
+
+          return {
+            id: user.staff_id, // Assuming 'id' is required for the key in tables
+            name: `${user.staff_fname} ${user.staff_lname}`,
+            position: user.position,
+            wfhDates: userApprovedDates,
+            reporting_manager: user.reporting_manager
+          };
+        });
+        console.log(formattedDepartmentStaff, 'fds');
+
+        setDepartmentStaff(formattedDepartmentStaff);
+      } catch (error) {
+        console.error('Error fetching team data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTeamData();
+  }, [reportingManagerId]);
+
+  if (loading) {
+    return <p>Loading team data...</p>;
+  }
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="mb-4 text-2xl font-bold">Team Schedule</h1>
       <Suspense fallback={<div>Loading...</div>}>
         <TeamScheduleCalendar
-          currentUser={currentUser}
-          departmentStaff={departmentStaff}
+          currentUser={session.user} // Pass current user details if needed
+          departmentStaff={departmentStaff} // Pass the formatted department staff data
         />
       </Suspense>
     </div>

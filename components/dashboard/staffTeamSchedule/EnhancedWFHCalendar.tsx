@@ -350,7 +350,8 @@ export default function TeamScheduleCalendar({
         textColor: 'black'
       }))
   );
-
+  console.log('child', departmentStaff);
+  // console.log("test");
   return (
     <div className="grid grid-cols-3 gap-6">
       <Card className="col-span-2 shadow-sm">
