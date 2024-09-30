@@ -27,15 +27,15 @@ model dept {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model requests {
-  request_id     Int                      @id @default(autoincrement())
+  request_id     Int              @id @default(autoincrement())
   staff_id       Int?
-  timeslot       String?                  @db.VarChar(20)
-  daterange      DateTime[]               @db.Date
+  timeslot       String?          @db.VarChar(20)
+  daterange      DateTime[]       @db.Date
   reason         String?
-  approved       String                   @db.VarChar(20)
+  approved       String           @db.VarChar(20)
   approved_dates approved_dates[]
   logs           logs[]
-  users          users?                   @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users          users?           @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model role {
