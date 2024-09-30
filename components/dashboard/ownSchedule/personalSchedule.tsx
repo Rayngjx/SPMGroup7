@@ -1,5 +1,5 @@
 'use client';
-
+import { auth } from '@/auth';
 import { useState, useEffect, useCallback } from 'react';
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar';
 import moment from 'moment';
@@ -35,7 +35,7 @@ interface ApprovedDate {
 }
 
 export default function PersonalSchedule() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [events, setEvents] = useState<ScheduleEntry[]>([]);
   const [approvedDates, setApprovedDates] = useState<ApprovedDate[]>([]);
   const [view, setView] = useState(Views.MONTH);
@@ -43,29 +43,30 @@ export default function PersonalSchedule() {
 
   //fetching using api route for specific user that is logged in
   useEffect(() => {
-    const fetchApprovedDates = async (staffId: number) => {
-      try {
-        const response = await fetch(`/api/approved-dates/${staffId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch approved dates');
+    // Fetch approved dates if session is loaded and user is authenticated
+    console.log(session, 'test');
+    if (status === 'authenticated' && session?.user?.staff_id) {
+      const fetchApprovedDates = async (staffId: number) => {
+        try {
+          const response = await fetch(`/api/approved-dates/${staffId}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch approved dates');
+          }
+          const data = await response.json();
+          const formattedDates = data.map((item: any) => ({
+            staff_id: item.staff_id,
+            request_id: item.request_id,
+            date: new Date(item.date)
+          }));
+          setApprovedDates(formattedDates);
+        } catch (error) {
+          console.error('Error fetching approved dates:', error);
         }
-        const data = await response.json();
-        const formattedDates = data.map((item: any) => ({
-          staff_id: item.staff_id,
-          request_id: item.request_id,
-          date: new Date(item.date)
-        }));
-        setApprovedDates(formattedDates);
-      } catch (error) {
-        console.error('Error fetching approved dates:', error);
-      }
-    };
+      };
 
-    // Fetch approved dates if session and staffId exist
-    if (session?.user?.staff_id) {
       fetchApprovedDates(session.user.staff_id);
     }
-  }, [session]);
+  }, [session, status]);
 
   // useEffect(() => {
   //   const fetchApprovedDates = async () => {
