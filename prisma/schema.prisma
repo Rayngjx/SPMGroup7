@@ -30,7 +30,7 @@ model requests {
   request_id     Int                      @id @default(autoincrement())
   staff_id       Int?
   timeslot       String?                  @db.VarChar(20)
-  daterange      Unsupported("daterange")
+  daterange      DateTime[]               @db.Date
   reason         String?
   approved       String                   @db.VarChar(20)
   approved_dates approved_dates[]

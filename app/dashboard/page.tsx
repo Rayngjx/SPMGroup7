@@ -16,23 +16,84 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ApprovedDatesTable from '@/components/dashboard/approvedDatesTable';
 import WFHCalendar from '@/components/dashboard/overviewcalendar/overviewcalendar';
+import { auth } from '@/auth';
+import authConfig from '@/auth.config';
+import { useEffect, useState } from 'react';
+import { NextResponse } from 'next/server';
 
 export default async function page() {
-  let getUsers;
-  try {
-    getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
-    console.log(getUsers);
+  const session = await auth();
+  console.log('Session: ', session); // Debug the session object
+  // let getUsers;
+  if (!session) {
+    console.log('No session found');
+    return <p>Please log in to view this page.</p>;
+  }
 
-    // console.log(response
-  } catch (error) {
+  if (session?.user?.staff_id) {
+    const staffId = session.user.staff_id;
+    try {
+      const getUsers = await db.users.findMany({
+        where: { staff_id: staffId }
+      });
+      console.log(getUsers); // Log retrieved users for debugging
+    } catch (error) {
+      console.error(error);
+    }
+  } else {
+    console.error('Staff ID not found in session.');
+  }
+
+  let staffId = 'User';
+  let staff_fname = 'User';
+  let role_id = 'User';
+
+  if (session?.user?.id) {
+    staffId = String(session.user.staff_id);
+    staff_fname = String(session.user.staff_fname); // Set staffId from the session object
+    role_id = String(session.user.role_id);
+  }
+
+  let users = [];
+  let error = null;
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/all`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch users');
+    }
+
+    users = await response.json();
+    console.log(users);
+  } catch (err) {
+    error = err.message;
     console.error(error);
   }
+
+  // let getUsers;
+  // try {
+  //   getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
+  //   console.log(getUsers);
+
+  //   // console.log(response
+  // } catch (error) {
+  //   console.error(error);
+  // }
   return (
     <PageContainer scrollable={true}>
       <div className="space-y-2">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-2xl font-bold tracking-tight">
-            Hi, Welcome back 👋
+            Hi, Welcome back {staff_fname} ({staffId}) {role_id}
           </h2>
 
           <div className="hidden items-center space-x-2 md:flex">
