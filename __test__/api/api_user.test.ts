@@ -1,26 +1,35 @@
 import { createMocks } from 'node-mocks-http';
-import { GET, PUT, DELETE, OPTIONS } from '@/app/api/users/staffId/route';
+import { Request, Response } from 'express';
+import { GET, PUT, DELETE, OPTIONS } from '@/app/api/users/[staffId]/route';
+import { getUser, updateUser, deleteUser } from '@/lib/crudFunctions/Staff';
+
+jest.mock('@/lib/crudFunctions/Staff', () => ({
+  getUser: jest.fn(),
+  updateUser: jest.fn(),
+  deleteUser: jest.fn()
+}));
 
 describe('GET /app/api/users/staffId', () => {
   it('should return 400 for invalid staffId', async () => {
+    (getUser as jest.Mock).mockResolvedValue(null);
     const { req, res } = createMocks({
       method: 'GET',
-      params: { staffId: 'invalid' }
+      params: { staffId: '000000' }
     });
 
-    await GET(req, { params: { staffId: 'invalid' } });
-
+    await GET(req as any, { params: { staffId: '000000' } });
     expect(res.statusCode).toBe(400);
     expect(res._getJSONData()).toEqual({ error: 'Invalid staffId' });
   });
 
   it('should return 404 when user is not found', async () => {
+    (getUser as jest.Mock).mockResolvedValue(null); // Mocking that no user is found
     const { req, res } = createMocks({
       method: 'GET',
       params: { staffId: '1' }
     });
 
-    await GET(req, { params: { staffId: '1' } });
+    await GET(req as any, { params: { staffId: '1' } });
 
     expect(res.statusCode).toBe(404);
     expect(res._getJSONData()).toEqual({ error: 'User not found' });
@@ -29,10 +38,10 @@ describe('GET /app/api/users/staffId', () => {
   it('should return 200 and user data when user is found', async () => {
     const { req, res } = createMocks({
       method: 'GET',
-      params: { staffId: '1' }
+      params: { staffId: '130001' }
     });
 
-    await GET(req, { params: { staffId: '1' } });
+    await GET(req as any, { params: { staffId: '130001' } });
 
     expect(res.statusCode).toBe(200);
     expect(res._getJSONData()).toEqual(
@@ -51,7 +60,7 @@ describe('PUT /app/api/users/staffId', () => {
       params: { staffId: 'invalid' }
     });
 
-    await PUT(req, { params: { staffId: 'invalid' } });
+    await PUT(req as any, { params: { staffId: 'invalid' } });
 
     expect(res.statusCode).toBe(400);
     expect(res._getJSONData()).toEqual({ error: 'Invalid staffId' });
@@ -67,7 +76,7 @@ describe('PUT /app/api/users/staffId', () => {
       name: 'New Name'
     });
 
-    await PUT(req, { params: { staffId: '1' } });
+    await PUT(req as any, { params: { staffId: '1' } });
 
     expect(res.statusCode).toBe(500);
     expect(res._getJSONData()).toEqual({ error: 'Failed to update user' });
@@ -83,7 +92,7 @@ describe('PUT /app/api/users/staffId', () => {
       name: 'Updated Name'
     });
 
-    await PUT(req, { params: { staffId: '1' } });
+    await PUT(req as any, { params: { staffId: '1' } });
 
     expect(res.statusCode).toBe(200);
     expect(res._getJSONData()).toEqual(
@@ -99,7 +108,7 @@ describe('DELETE /app/api/users/staffId', () => {
       params: { staffId: 'invalid' }
     });
 
-    await DELETE(req, { params: { staffId: 'invalid' } });
+    await DELETE(req as any, { params: { staffId: 'invalid' } });
 
     expect(res.statusCode).toBe(400);
     expect(res._getJSONData()).toEqual({ error: 'Invalid staffId' });
@@ -111,7 +120,7 @@ describe('DELETE /app/api/users/staffId', () => {
       params: { staffId: '1' }
     });
 
-    await DELETE(req, { params: { staffId: '1' } });
+    await DELETE(req as any, { params: { staffId: '1' } });
 
     expect(res.statusCode).toBe(500);
     expect(res._getJSONData()).toEqual({ error: 'Failed to delete user' });
@@ -123,7 +132,7 @@ describe('DELETE /app/api/users/staffId', () => {
       params: { staffId: '1' }
     });
 
-    await DELETE(req, { params: { staffId: '1' } });
+    await DELETE(req as any, { params: { staffId: '1' } });
 
     expect(res.statusCode).toBe(200);
     expect(res._getJSONData()).toEqual(
