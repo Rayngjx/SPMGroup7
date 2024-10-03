@@ -20,6 +20,7 @@ import { auth } from '@/auth';
 import authConfig from '@/auth.config';
 import { useEffect, useState } from 'react';
 import { NextResponse } from 'next/server';
+import CreateRequestForm from '@/components/forms/create-request/wfh-request';
 
 export default async function page() {
   const session = await auth();
@@ -107,7 +108,10 @@ export default async function page() {
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <CreateRequestForm />
+            </div>
+            {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -231,7 +235,7 @@ export default async function page() {
               <div className="col-span-4 md:col-span-3">
                 <PieGraph />
               </div>
-            </div>
+            </div> */}
           </TabsContent>
           <TabsContent value="analytics" className="space-y-4">
             <WFHCalendar />

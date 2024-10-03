@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { createRequest } from '@/lib/crudFunctions/Requests';
 
 // Handle GET request to fetch requests by staffId
 export async function GET(
@@ -31,7 +32,36 @@ export async function GET(
   }
 }
 
+export async function POST(req: Request) {
+  try {
+    const payload = await req.json();
+
+    if (
+      !payload.staff_id ||
+      !payload.timeslot ||
+      !payload.daterange ||
+      !payload.reason
+    ) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    const result = await createRequest(payload);
+
+    return result.success
+      ? NextResponse.json(result.request, { status: 201 })
+      : NextResponse.json({ error: result.error }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to create request' },
+      { status: 500 }
+    );
+  }
+}
+
 // Handle OPTIONS request
 export async function OPTIONS() {
-  return NextResponse.json({ allow: ['GET'] }, { status: 200 });
+  return NextResponse.json({ allow: ['GET', 'POST'] }, { status: 200 });
 }
