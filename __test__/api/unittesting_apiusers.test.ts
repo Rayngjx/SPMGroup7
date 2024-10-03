@@ -9,47 +9,67 @@ jest.mock('@/lib/crudFunctions/Staff', () => ({
   deleteUser: jest.fn()
 }));
 
+// for invalid staffId (not 6 digits)
 describe('GET /app/api/users/staffId', () => {
   it('should return 400 for invalid staffId', async () => {
     (getUser as jest.Mock).mockResolvedValue(null);
     const { req, res } = createMocks({
       method: 'GET',
-      params: { staffId: '000000' }
+      params: { staffId: '0' }
     });
 
     await GET(req as any, { params: { staffId: '000000' } });
     expect(res.statusCode).toBe(400);
     expect(res._getJSONData()).toEqual({ error: 'Invalid staffId' });
   });
-
+  // when user enters a staffId that isnt in the database
   it('should return 404 when user is not found', async () => {
     (getUser as jest.Mock).mockResolvedValue(null); // Mocking that no user is found
     const { req, res } = createMocks({
       method: 'GET',
-      params: { staffId: '1' }
+      params: { staffId: '000001' }
     });
 
-    await GET(req as any, { params: { staffId: '1' } });
+    await GET(req as any, { params: { staffId: '000001' } });
 
     expect(res.statusCode).toBe(404);
     expect(res._getJSONData()).toEqual({ error: 'User not found' });
   });
 
-  it('should return 200 and user data when user is found', async () => {
+  // when user enters a staffId that is in the database, happy path + correct structure
+  it('should return 200 and user data when user is found and correct structure', async () => {
+    const mockGetUser = getUser as jest.Mock;
+    (getUser as jest.Mock).mockResolvedValue({
+      staff_id: 140015,
+      staff_fname: 'Oliva',
+      staff_lname: 'Lim',
+      dept_id: 2,
+      position: 'Account Manager',
+      country: 'Singapore',
+      email: 'Oliva.Lim@allinone.com.sg',
+      reporting_manager: 140894,
+      role_id: 2,
+      id: '8b90108c-9a05-4b43-bc0f-d98e5dfeb13c'
+    });
     const { req, res } = createMocks({
       method: 'GET',
-      params: { staffId: '130001' }
+      params: { staffId: '140015' }
     });
 
-    await GET(req as any, { params: { staffId: '130001' } });
+    await GET(req as any, { params: { staffId: '140015' } });
+    expect(mockGetUser).toHaveBeenCalledWith({ staff_id: 140015 });
+
+    const rawData = res._getData(); // Log raw data
+    console.log('Raw Response:', rawData); // Log to see what is returned
 
     expect(res.statusCode).toBe(200);
-    expect(res._getJSONData()).toEqual(
-      expect.objectContaining({
-        staff_id: 1,
-        name: 'John Doe'
-      })
-    );
+
+    const json = rawData ? JSON.parse(rawData) : null;
+    expect(json).toEqual(expect.objectContaining({ staff_id: 140015 }));
+    expect(json).toHaveProperty('staff_id');
+    expect(json).toHaveProperty('name');
+    expect(typeof json.staff_id).toBe('number');
+    expect(typeof json.name).toBe('string');
   });
 });
 
