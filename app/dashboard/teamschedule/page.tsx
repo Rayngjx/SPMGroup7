@@ -2,6 +2,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
+import { cloneUniformsGroups } from 'three/src/renderers/shaders/UniformsUtils.js';
 
 const TeamScheduleCalendar = dynamic(
   () => import('@/components/dashboard/staffTeamSchedule/EnhancedWFHCalendar'),
@@ -18,6 +19,7 @@ async function getApprovedDates(teamLeadId: number) {
   if (!response.ok) {
     throw new Error('Failed to fetch approved dates');
   }
+  console.log(response)
   return response.json();
 }
 
@@ -50,7 +52,7 @@ export default function TeamSchedulePage() {
           reportingManagerId !== null
             ? await getApprovedDates(reportingManagerId)
             : [];
-
+        console.log(approvedDates,"lks")
         // Collect unique staff IDs from approved dates
         const staffIds = [
           ...new Set(approvedDates.map((date) => date.staff_id))
@@ -77,6 +79,7 @@ export default function TeamSchedulePage() {
         console.log(formattedDepartmentStaff, 'fds');
 
         setDepartmentStaff(formattedDepartmentStaff);
+        
       } catch (error) {
         console.error('Error fetching team data:', error);
       } finally {

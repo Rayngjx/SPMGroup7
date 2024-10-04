@@ -50,7 +50,7 @@ export const authConfig = {
       return token;
     },
     async session({ session, token }) {
-      console.log('Token in Session callback:', token); // Debug token
+      // console.log('Token in Session callback:', token); // Debug token
 
       // Ensure session.user exists and assign token values
       if (token) {
