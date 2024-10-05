@@ -1,30 +1,23 @@
 'use client';
-import { auth } from '@/auth';
-import { useState, useEffect, useCallback } from 'react';
-import { Calendar, momentLocalizer, Views } from 'react-big-calendar';
-import moment from 'moment';
+
+import React, { useState, useEffect } from 'react';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import PageContainer from '@/components/layout/page-container';
-import { getApprovedDates } from '@/lib/crudFunctions/ApprovedDates';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useSession } from 'next-auth/react';
-
-const localizer = momentLocalizer(moment);
+import { CalendarDateRangePicker } from '@/components/date-range-picker';
+import { format } from 'date-fns';
 
 interface ScheduleEntry {
   id: number;
   title: string;
-  start: Date;
-  end: Date;
+  start: string;
+  end: string;
   allDay: boolean;
 }
 
@@ -38,13 +31,9 @@ export default function PersonalSchedule() {
   const { data: session, status } = useSession();
   const [events, setEvents] = useState<ScheduleEntry[]>([]);
   const [approvedDates, setApprovedDates] = useState<ApprovedDate[]>([]);
-  const [view, setView] = useState(Views.MONTH);
-  const [date, setDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  //fetching using api route for specific user that is logged in
   useEffect(() => {
-    // Fetch approved dates if session is loaded and user is authenticated
-    console.log(session, 'test');
     if (status === 'authenticated' && session?.user?.staff_id) {
       const fetchApprovedDates = async (staffId: number) => {
         try {
@@ -59,6 +48,15 @@ export default function PersonalSchedule() {
             date: new Date(item.date)
           }));
           setApprovedDates(formattedDates);
+
+          const calendarEvents = formattedDates.map((date: ApprovedDate) => ({
+            id: date.request_id,
+            title: 'WFH',
+            start: format(date.date, 'yyyy-MM-dd'),
+            end: format(date.date, 'yyyy-MM-dd'),
+            allDay: true
+          }));
+          setEvents(calendarEvents);
         } catch (error) {
           console.error('Error fetching approved dates:', error);
         }
@@ -68,135 +66,71 @@ export default function PersonalSchedule() {
     }
   }, [session, status]);
 
-  // useEffect(() => {
-  //   const fetchApprovedDates = async () => {
-  //     try {
-  //       const response = await getApprovedDates()
-  //       const formattedDates = response.map((item: any) => ({
-  //         staff_id: item.staff_id,
-  //         request_id: item.request_id,
-  //         date: new Date(item.date)
-  //       }))
-  //       setApprovedDates(formattedDates)
-  //     } catch (error) {
-  //       console.error('Error fetching approved dates:', error)
-  //     }
-  //   }
-
-  //   fetchApprovedDates()
-  // }, [])
-
-  const generateSchedule = useCallback(() => {
-    const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
-    const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-
-    const generatedEvents: ScheduleEntry[] = [];
-
-    for (
-      let d = new Date(startDate);
-      d <= endDate;
-      d.setDate(d.getDate() + 1)
-    ) {
-      const currentDate = new Date(d);
-      const isWFH = approvedDates.some(
-        (dateItem) =>
-          dateItem.date.toDateString() === currentDate.toDateString()
-      );
-
-      if (isWFH) {
-        generatedEvents.push({
-          id: currentDate.getTime(),
-          title: 'WFH',
-          start: new Date(currentDate),
-          end: new Date(currentDate),
-          allDay: true
-        });
-      }
-    }
-
-    setEvents(generatedEvents);
-  }, [approvedDates, date]);
-
-  useEffect(() => {
-    generateSchedule();
-  }, [generateSchedule]);
-
-  const handleViewChange = (newView: string) => {
-    setView(newView as any);
-  };
-
-  const handleNavigate = (newDate: Date) => {
-    setDate(newDate);
-  };
-
-  const eventStyleGetter = (event: ScheduleEntry) => {
-    return {
-      style: {
-        backgroundColor: '#4CAF50',
-        borderRadius: '0px',
-        opacity: 0.8,
-        color: 'white',
-        border: '0px',
-        display: 'block'
-      }
-    };
+  const handleDateClick = (arg: any) => {
+    setSelectedDate(arg.date);
   };
 
   return (
     <PageContainer scrollable={true}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between space-y-2">
           <h2 className="text-2xl font-bold tracking-tight">
             Your Personal Schedule
           </h2>
-          <div className="flex items-center space-x-2">
-            <Select onValueChange={handleViewChange} defaultValue={view}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select view" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={Views.MONTH}>Month</SelectItem>
-                <SelectItem value={Views.WEEK}>Week</SelectItem>
-                <SelectItem value={Views.DAY}>Day</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="hidden items-center space-x-2 md:flex">
+            <CalendarDateRangePicker />
             <Button>Download</Button>
           </div>
         </div>
-        <div className="flex flex-col gap-4 lg:flex-row">
-          <Card className="w-full lg:w-3/4">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Work From Home Schedule</CardTitle>
             </CardHeader>
             <CardContent>
-              <Calendar
-                localizer={localizer}
-                events={events}
-                startAccessor="start"
-                endAccessor="end"
-                style={{ height: 'calc(100vh - 250px)' }}
-                view={view}
-                onView={setView as any}
-                date={date}
-                onNavigate={handleNavigate}
-                views={[Views.MONTH, Views.WEEK, Views.DAY]}
-                eventPropGetter={eventStyleGetter}
-              />
+              <div className="h-[600px]">
+                <FullCalendar
+                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                  initialView="dayGridMonth"
+                  headerToolbar={{
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek'
+                  }}
+                  events={events}
+                  dateClick={handleDateClick}
+                  height="100%"
+                  eventContent={(eventInfo) => (
+                    <div className="flex items-center space-x-2 rounded p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+                      <div className="h-2 w-2 rounded-full bg-green-600"></div>
+                      <span className="text-xs text-foreground">
+                        {eventInfo.event.title}
+                      </span>
+                    </div>
+                  )}
+                  dayMaxEvents={3}
+                  moreLinkContent={(args) => (
+                    <div className="text-primary-600 text-xs font-medium">
+                      +{args.num} more
+                    </div>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
-          <Card className="w-full lg:w-1/4">
+          <Card>
             <CardHeader>
               <CardTitle>Approved WFH Dates</CardTitle>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[calc(100vh-250px)]">
+              <ScrollArea className="h-[600px]">
                 <ul className="space-y-2">
                   {approvedDates.map((date) => (
                     <li
                       key={date.request_id}
                       className="flex items-center justify-between border-b py-2 last:border-b-0"
                     >
-                      <span>{date.date.toLocaleDateString()}</span>
+                      <span>{format(date.date, 'MMMM d, yyyy')}</span>
                       <span className="text-sm font-semibold text-green-600">
                         WFH
                       </span>
