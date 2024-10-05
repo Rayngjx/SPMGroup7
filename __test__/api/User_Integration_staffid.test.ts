@@ -13,6 +13,7 @@ describe('Integration Tests for User API Routes', () => {
   beforeEach(async () => {
     // Ensure the test user is deleted before each test
     await db.users.deleteMany({ where: { staff_id: 123123 } });
+    await db.users.deleteMany({ where: { staff_id: 123124 } });
   });
 
   afterEach(async () => {
@@ -96,6 +97,55 @@ describe('Integration Tests for User API Routes', () => {
     expect(
       (updatedUser as { staff_fname: string; staff_lname: string }).staff_lname
     ).toBe('Smith');
+  });
+
+  // since email is unique, cannot update email to an existing email
+  it('should NOT update the user successfully + UNIQUE EMAIL (PUT /api/user/:staffId)', async () => {
+    await db.users.create({
+      data: {
+        staff_id: 123123,
+        staff_fname: 'John',
+        staff_lname: 'Doe',
+        department: 'Sales',
+        position: 'Manager',
+        country: 'USA',
+        email: 'tester123@example.com',
+        role_id: 1 // Assuming role_id 1 exists
+      }
+    });
+
+    await db.users.create({
+      data: {
+        staff_id: 123124,
+        staff_fname: 'Jonathan',
+        staff_lname: 'Lim',
+        department: 'Sales',
+        position: 'Manager',
+        country: 'Canada',
+        email: 'tester124@example.com',
+        role_id: 1 // Assuming role_id 1 exists
+      }
+    });
+    const req = new Request('http://localhost:3000/api/user/123123', {
+      method: 'PUT',
+      body: JSON.stringify({ email: 'tester124@example.com' }), //staff_id:123124's email
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const params = { staffId: '123123' };
+    const response = await PUT(req, { params });
+
+    const json = await response.json();
+    // expect(response.status).toBe(400);
+    // expect(json.error).toContain('Unique constraint failed on the fields: (`email`)');
+
+    // Verify that the original user data hasn't changed
+    const updatedUser = await db.users.findUnique({
+      where: { staff_id: 123123 }
+    });
+    expect(updatedUser).not.toBeNull();
+    expect((updatedUser as { email: string }).email).toBe(
+      'tester123@example.com'
+    );
   });
 
   // DELETE (Delete user)

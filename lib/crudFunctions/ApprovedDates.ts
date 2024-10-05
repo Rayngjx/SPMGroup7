@@ -41,7 +41,7 @@ export async function getTeamApprovedDates(teamleadId: number) {
 }
 
 // Get approved dates of department
-export async function getDpmtApprovedDates(deptId: number) {
+export async function getDpmtApprovedDates(deptId: String) {
   // Find all users with dept_id equal to deptId
   const departmentMembers = await db.users.findMany({
     where: { dept_id: deptId },
