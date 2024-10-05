@@ -13,7 +13,7 @@ describe('Logs API by ProcessorId Integration Tests', () => {
     department: 'Test Department',
     position: 'Test Position',
     country: 'Test Country',
-    role_id: 1 // Assuming role_id 2 exists
+    role_id: 1 // Assuming role_id 1 exists
   };
 
   const testUserStaff = {
@@ -28,19 +28,18 @@ describe('Logs API by ProcessorId Integration Tests', () => {
   };
 
   const testLog = {
-    staff_id: testStaffId, // Reference a valid staff_id from the users table
     request_id: 123, // Required
-    processor_id: testProcessorId, // Reference a valid processor_id from the users table
-    reason: 'Testing log creation', // Optional, can be null or string
-    request_type: 'Test Request', // String as per the schema (length limit of 50)
-    approved: 'Yes', // Optional, can be null or string (length limit of 20)
-    timestamp: new Date('2024-01-01'), // Ensure you're passing a valid date
-    users_logs_staff_idTousers: {
-      connect: { staff_id: testStaffId } // Connect to existing staff_id
-    },
-    users_logs_processor_idTousers: {
-      connect: { staff_id: testProcessorId } // Connect to existing processor_id
-    }
+    staff_id: testProcessorId, // Required
+    processor_id: testProcessorId, // Required
+    reason: 'Testing log creation', // Optional
+    request_type: 'Regular Request' // String as per the schema (length limit of 50)
+    // approved: "True", // Optional, can be null or string (length limit of 20)
+    // users_logs_staff_idTousers: {
+    //   connect: { staff_id: testStaffId }
+    // },
+    // users_logs_processor_idTousers: {
+    //   connect: { staff_id: testProcessorId }
+    // }
   };
 
   beforeAll(async () => {
@@ -53,8 +52,10 @@ describe('Logs API by ProcessorId Integration Tests', () => {
     });
 
     // Seed the database with a test log entry
-    await db.logs.create({ data: testLog });
-  });
+    await db.logs.create({
+      data: testLog
+    });
+  }); // << Closing the beforeAll block
 
   afterAll(async () => {
     // Clean up the test data
