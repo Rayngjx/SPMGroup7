@@ -4,10 +4,11 @@ import { db } from '@/lib/db';
 interface LogsPayload {
   log_id?: number; // Optional for create
   staff_id?: number;
-  request_id?: number;
-  withdraw_request_id?: number;
+  request_id: number;
   processor_id?: number;
   reason?: string;
+  request_type: string;
+  approved?: string;
 }
 
 // Get all logs
@@ -27,7 +28,7 @@ export async function getStaffLogs(staffId: number) {
 // Get logs by processor ID
 export async function getProcessorLogs(processorId: number) {
   const response = await db.logs.findMany({
-    where: { staff_id: processorId }
+    where: { processor_id: processorId }
   });
   return response ? response : null;
 }
@@ -39,23 +40,16 @@ export async function getRequestLogs(requestId: number) {
   return response ? response : null;
 }
 
-// Get logs by withdraw request ID
-export async function getWithdrawRequestLogs(withdrawRequestId: number) {
-  const response = await db.logs.findMany({
-    where: { withdraw_request_id: withdrawRequestId }
-  });
-  return response ? response : null;
-}
-
 // Create a new log entry
 export async function createLog(payload: LogsPayload) {
   const response = await db.logs.create({
     data: {
       staff_id: payload.staff_id,
       request_id: payload.request_id,
-      withdraw_request_id: payload.withdraw_request_id,
       processor_id: payload.processor_id,
-      reason: payload.reason
+      reason: payload.reason,
+      request_type: payload.request_type,
+      approved: payload.approved
     }
   });
   return response
@@ -74,9 +68,10 @@ export async function updateLog(payload: LogsPayload) {
     data: {
       staff_id: payload.staff_id,
       request_id: payload.request_id,
-      withdraw_request_id: payload.withdraw_request_id,
       processor_id: payload.processor_id,
-      reason: payload.reason
+      reason: payload.reason,
+      request_type: payload.request_type,
+      approved: payload.approved
     }
   });
   return response

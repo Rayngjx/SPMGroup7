@@ -3,17 +3,17 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   req: Request,
-  { params }: { params: { deptId: string } }
+  { params }: { params: { department: string } }
 ) {
-  const deptId = parseInt(params.deptId);
+  const department = parseInt(params.department);
 
-  if (!deptId) {
-    return NextResponse.json({ error: 'Invalid deptId' }, { status: 400 });
+  if (!department) {
+    return NextResponse.json({ error: 'Invalid department' }, { status: 400 });
   }
 
   try {
     const departmentMembers = await db.users.findMany({
-      where: { dept_id: deptId },
+      where: { department: department.toString() },
       select: { staff_id: true }
     });
 

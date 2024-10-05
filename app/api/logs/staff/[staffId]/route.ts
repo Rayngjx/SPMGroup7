@@ -25,3 +25,7 @@ export async function GET(
     );
   }
 }
+
+export async function OPTIONS() {
+  return NextResponse.json({ allow: ['GET'] }, { status: 200 });
+}
