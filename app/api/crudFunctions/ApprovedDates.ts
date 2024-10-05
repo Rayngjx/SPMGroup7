@@ -113,7 +113,7 @@ export async function getApprovedDatesWithUserDetails() {
           select: {
             staff_fname: true,
             staff_lname: true,
-            dept_id: true,
+            department: true,
             position: true,
             email: true
           }

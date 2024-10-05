@@ -34,32 +34,21 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { format, isValid } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 import { getApprovedDatesWithUserDetails } from '@/app/api/crudFunctions/ApprovedDates';
 import { getAllUsers, getUser } from '@/app/api/crudFunctions/Staff';
 
-const departments = [
-  'Department 1',
-  'Department 2',
-  'Department 3',
-  'Department 4',
-  'Department 5',
-  'Department 6',
-  'Department 7',
-  'Department 8'
-];
-
 const departmentColors: Record<string, string> = {
-  'Department 1': 'bg-blue-600',
-  'Department 2': 'bg-red-600',
-  'Department 3': 'bg-green-600',
-  'Department 4': 'bg-yellow-600',
-  'Department 5': 'bg-purple-600',
-  'Department 6': 'bg-pink-600',
-  'Department 7': 'bg-indigo-600',
-  'Department 8': 'bg-orange-600'
+  'Human Resources': 'bg-blue-600',
+  Finance: 'bg-red-600',
+  Marketing: 'bg-green-600',
+  Sales: 'bg-yellow-600',
+  Engineering: 'bg-purple-600',
+  'Customer Support': 'bg-pink-600',
+  Operations: 'bg-indigo-600',
+  Legal: 'bg-orange-600'
 };
 
 interface Employee {
@@ -68,7 +57,7 @@ interface Employee {
   date: string;
   staff_fname: string;
   staff_lname: string;
-  dept_id: number;
+  department: string;
   position: string;
   email: string;
   reason: string;
@@ -78,7 +67,7 @@ interface AllUserDetails {
   staff_id: number;
   staff_fname: string;
   staff_lname: string;
-  dept_id: number;
+  department: string;
   email: string;
   position: string;
   role_id: number;
@@ -97,9 +86,8 @@ type ColumnKey = (typeof allColumns)[number]['key'];
 
 export default function WFHCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedDepartments, setSelectedDepartments] = useState<number[]>([
-    1, 2, 3, 4, 5, 6, 7, 8
-  ]);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [allDepartments, setAllDepartments] = useState<string[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [staffDetails, setStaffDetails] = useState<Employee[]>([]);
   const [allUserDetails, setAllUserDetails] = useState<AllUserDetails[]>([]);
@@ -137,8 +125,15 @@ export default function WFHCalendar() {
           throw new Error('Error fetching users');
         }
 
-        console.log('Raw response from getting all users:', response.length);
+        console.log('Raw response from getting all users:', response);
         setAllUserDetails(response);
+
+        // Extract unique department names
+        const departments = [
+          ...new Set(response.map((user: AllUserDetails) => user.department))
+        ];
+        setAllDepartments(departments);
+        setSelectedDepartments(departments);
       } catch (error) {
         console.error('Error:', error);
         setError('Failed to fetch user details. Please try again later.');
@@ -155,6 +150,11 @@ export default function WFHCalendar() {
         if (!response) {
           throw new Error('Error fetching users');
         }
+
+        console.log(
+          'Raw response from getApprovedDatesWithUserDetails:',
+          response
+        );
 
         const formattedData: Employee[] = response
           .map((item: any) => {
@@ -175,13 +175,15 @@ export default function WFHCalendar() {
               date: format(parsedDate, 'yyyy-MM-dd'),
               staff_fname: item.users.staff_fname,
               staff_lname: item.users.staff_lname,
-              dept_id: item.users.dept_id,
+              department: item.users.department,
               position: item.users.position,
               email: item.users.email,
               reason: item.requests.reason
             };
           })
           .filter(Boolean);
+
+        console.log('Formatted data:', formattedData);
 
         setStaffDetails(formattedData);
         updateEvents(formattedData);
@@ -195,31 +197,39 @@ export default function WFHCalendar() {
   }, []);
 
   const updateEvents = (data: Employee[]) => {
+    console.log('Updating events with data:', data);
+
     const filteredData = data.filter((employee) =>
-      selectedDepartments.includes(employee.dept_id)
+      selectedDepartments.includes(employee.department)
     );
+
+    console.log('Filtered data:', filteredData);
 
     const groupedEvents = filteredData.reduce(
       (acc, employee) => {
         const dateStr = employee.date;
         if (!acc[dateStr]) acc[dateStr] = {};
-        const dept = departments[employee.dept_id - 1];
-        if (!acc[dateStr][dept]) acc[dateStr][dept] = [];
-        acc[dateStr][dept].push(employee);
+        if (!acc[dateStr][employee.department])
+          acc[dateStr][employee.department] = [];
+        acc[dateStr][employee.department].push(employee);
         return acc;
       },
       {} as Record<string, Partial<Record<string, Employee[]>>>
     );
 
+    console.log('Grouped events:', groupedEvents);
+
     const formattedEvents = Object.entries(groupedEvents).flatMap(
       ([date, departments]) =>
         Object.entries(departments).map(([department, employees]) => ({
-          title: `${department} : ${employees!.length}`,
+          title: `${department}: ${employees!.length}`,
           start: date,
           allDay: true,
           extendedProps: { department, employees }
         }))
     );
+
+    console.log('Formatted events:', formattedEvents);
 
     setEvents(formattedEvents);
   };
@@ -232,48 +242,50 @@ export default function WFHCalendar() {
     const filteredData = staffDetails.filter(
       (employee) =>
         employee.date === format(date, 'yyyy-MM-dd') &&
-        selectedDepartments.includes(employee.dept_id)
+        selectedDepartments.includes(employee.department)
     );
     setCurrentPage(1);
     return filteredData;
   };
 
-  const getPresentEmployees = (date: Date, deptId: number) => {
+  const getPresentEmployees = (date: Date, department: string) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const wfhEmployees = new Set(
       staffDetails
         .filter(
-          (employee) => employee.date === dateStr && employee.dept_id === deptId
+          (employee) =>
+            employee.date === dateStr && employee.department === department
         )
         .map((employee) => employee.staff_id)
     );
 
     return allUserDetails.filter(
       (employee) =>
-        !wfhEmployees.has(employee.staff_id) && employee.dept_id === deptId
+        !wfhEmployees.has(employee.staff_id) &&
+        employee.department === department
     );
   };
 
   useEffect(() => {
     const filteredData = updateStaffDetails(selectedDate);
-    const presentData = getPresentEmployees(selectedDate, 1); // Default to Department 1
+    const presentData = getPresentEmployees(
+      selectedDate,
+      selectedDepartments[0] || ''
+    );
     setPresentEmployees(presentData);
   }, [selectedDate, staffDetails, selectedDepartments, allUserDetails]);
 
-  const toggleDepartment = (deptId: number) => {
+  const toggleDepartment = (dept: string) => {
     setSelectedDepartments((prev) =>
-      prev.includes(deptId)
-        ? prev.filter((d) => d !== deptId)
-        : [...prev, deptId]
+      prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]
     );
   };
 
   const handleEventClick = (info: any) => {
     const { department, employees } = info.event.extendedProps;
-    const deptId = departments.indexOf(department) + 1;
     const presentEmployees = getPresentEmployees(
       new Date(info.event.start),
-      deptId
+      department
     );
     setDialogContent({
       title: `${department} - ${format(
@@ -336,20 +348,20 @@ export default function WFHCalendar() {
   );
 
   const departmentCounts = useMemo(() => {
-    return departments.reduce(
-      (acc, dept, index) => {
+    return allDepartments.reduce(
+      (acc, dept) => {
         acc[dept] = allUserDetails.filter(
-          (employee) => employee.dept_id === index + 1
+          (employee) => employee.department === dept
         ).length;
         return acc;
       },
       {} as Record<string, number>
     );
-  }, [allUserDetails]);
+  }, [allUserDetails, allDepartments]);
 
   const totalWFH = filteredData.length;
   const totalEmployees = selectedDepartments.reduce(
-    (sum, deptId) => sum + (departmentCounts[departments[deptId - 1]] || 0),
+    (sum, dept) => sum + (departmentCounts[dept] || 0),
     0
   );
   const totalInOffice = totalEmployees - totalWFH;
@@ -375,17 +387,14 @@ export default function WFHCalendar() {
                 </PopoverTrigger>
                 <PopoverContent className="w-56" align="end">
                   <div className="space-y-2">
-                    {departments.map((dept, index) => (
+                    {allDepartments.map((dept) => (
                       <div key={dept} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`dept-${index + 1}`}
-                          checked={selectedDepartments.includes(index + 1)}
-                          onCheckedChange={() => toggleDepartment(index + 1)}
+                          id={`dept-${dept}`}
+                          checked={selectedDepartments.includes(dept)}
+                          onCheckedChange={() => toggleDepartment(dept)}
                         />
-                        <label
-                          htmlFor={`dept-${index + 1}`}
-                          className="text-sm"
-                        >
+                        <label htmlFor={`dept-${dept}`} className="text-sm">
                           {dept}
                         </label>
                       </div>
@@ -415,7 +424,7 @@ export default function WFHCalendar() {
                       className={`h-2 w-2 rounded-full ${
                         departmentColors[
                           eventInfo.event.extendedProps.department
-                        ]
+                        ] || 'bg-gray-400'
                       }`}
                     ></div>
                     <span className="text-xs text-foreground">
@@ -460,10 +469,9 @@ export default function WFHCalendar() {
                 <span className="text-sm font-medium">{totalInOffice}</span>
               </div>
               <div className="my-4 h-px bg-border"></div>
-              {departments.map((dept, index) => {
-                if (!selectedDepartments.includes(index + 1)) return null;
+              {allDepartments.map((dept) => {
                 const wfhCount = filteredData.filter(
-                  (staff) => staff.dept_id === index + 1
+                  (staff) => staff.department === dept
                 ).length;
                 const totalInDepartment = departmentCounts[dept] || 0;
                 return (
@@ -475,7 +483,9 @@ export default function WFHCalendar() {
                       </span>
                       <div className="h-1.5 w-24 rounded-full bg-secondary">
                         <div
-                          className={`h-1.5 rounded-full ${departmentColors[dept]}`}
+                          className={`h-1.5 rounded-full ${
+                            departmentColors[dept] || 'bg-gray-400'
+                          }`}
                           style={{
                             width: `${
                               (wfhCount / (totalInDepartment || 1)) * 100
@@ -565,8 +575,6 @@ export default function WFHCalendar() {
                       <TableCell key={`${staff.staff_id}-${column.key}`}>
                         {column.key === 'name'
                           ? `${staff.staff_fname} ${staff.staff_lname}`
-                          : column.key === 'department'
-                          ? departments[staff.dept_id - 1]
                           : staff[column.key]}
                       </TableCell>
                     ))}
@@ -601,7 +609,6 @@ export default function WFHCalendar() {
           </div>
         </CardContent>
       </Card>
-
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
@@ -763,7 +770,7 @@ export default function WFHCalendar() {
               </div>
               <div>
                 <h3 className="text-sm font-medium">Department</h3>
-                <p>{departments[selectedEmployee.dept_id - 1]}</p>
+                <p>{selectedEmployee.department}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium">Position</h3>
