@@ -9,6 +9,7 @@ import { approved_dates } from '@prisma/client';
 import { date } from 'zod';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import React from 'react';
 
 // Define types for data structures
 interface TimeOffHistory {

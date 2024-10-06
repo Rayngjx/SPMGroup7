@@ -39,7 +39,11 @@ export async function getUserRole(staffId: number) {
 
 // Get all roles
 export async function getRoles() {
-  const response = await db.role.findMany();
+  const response = await db.role.findMany({
+    orderBy: {
+      role_id: 'asc' // Change 'asc' to 'desc' if you want to sort in descending order
+    }
+  });
   return response ? response : null;
 }
 
