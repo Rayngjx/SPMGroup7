@@ -37,8 +37,8 @@ import {
 import { format, isValid, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-import { getApprovedDatesWithUserDetails } from '@/app/api/crudFunctions/ApprovedDates';
-import { getAllUsers, getUser } from '@/app/api/crudFunctions/Staff';
+import { getApprovedDatesWithUserDetails } from '@/lib/crudFunctions/ApprovedDates';
+import { getAllUsers, getUser } from '@/lib/crudFunctions/Staff';
 
 const departmentColors: Record<string, string> = {
   'Human Resources': 'bg-blue-600',
