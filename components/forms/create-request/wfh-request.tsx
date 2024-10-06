@@ -36,6 +36,7 @@ type RequestFormData = {
   timeslot: string;
   daterange: { from: Date; to: Date } | undefined;
   reason: string;
+  document: File | undefined;
 };
 
 export default function CreateRequestForm() {
@@ -46,7 +47,8 @@ export default function CreateRequestForm() {
     defaultValues: {
       timeslot: '',
       daterange: undefined,
-      reason: ''
+      reason: '',
+      document: undefined
     }
   });
 
@@ -54,6 +56,37 @@ export default function CreateRequestForm() {
     setIsSubmitting(true);
 
     try {
+      let documentUrl = null; // To store the document URL or ID
+
+      // 1. Upload the document (if it exists)
+      if (data.document) {
+        const fileFormData = new FormData();
+        fileFormData.append('document', data.document);
+
+        const uploadResponse = await fetch('/api/documents', {
+          method: 'POST',
+          body: fileFormData
+        });
+
+        if (!uploadResponse.ok) {
+          const uploadErrorData = await uploadResponse.json();
+          throw new Error(uploadErrorData.error || 'Document upload failed');
+        }
+
+        const uploadData = await uploadResponse.json();
+        documentUrl = uploadData.url; // Assuming the response contains a `url` for the uploaded document
+      }
+
+      // 2. Submit the form data (timeslot, daterange, reason, staff_id, document URL)
+      const formDataPayload = {
+        staff_id: Number(session?.user?.staff_id), // Ensure staff_id is a number
+        timeslot: data.timeslot,
+        daterange: JSON.stringify([data.daterange?.from, data.daterange?.to]),
+        reason: data.reason,
+        approved: 'Pending',
+        document_url: documentUrl // Tag the document URL with the request
+      };
+
       const response = await fetch(
         `/api/requests/by-staff/${session?.user?.staff_id}`,
         {
@@ -61,27 +94,21 @@ export default function CreateRequestForm() {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            staff_id: session?.user?.staff_id,
-            ...data,
-            approved: 'Pending',
-            daterange: data.daterange
-              ? [data.daterange.from, data.daterange.to]
-              : []
-          })
+          body: JSON.stringify(formDataPayload)
         }
       );
 
-      if (response.ok) {
-        toast({
-          title: 'Success',
-          description: 'Your WFH request has been submitted.'
-        });
-        form.reset();
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to submit request');
       }
+
+      toast({
+        title: 'Success',
+        description: 'Your WFH request has been submitted.'
+      });
+
+      form.reset();
     } catch (error) {
       toast({
         title: 'Error',
@@ -189,6 +216,26 @@ export default function CreateRequestForm() {
               </FormControl>
               <FormDescription>
                 Provide a brief explanation for your WFH request.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="document"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Upload Document</FormLabel>
+              <FormControl>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg" // Limit the accepted file types if needed
+                  onChange={(e) => field.onChange(e.target.files?.[0])}
+                />
+              </FormControl>
+              <FormDescription>
+                Attach a supporting document (optional).
               </FormDescription>
               <FormMessage />
             </FormItem>

@@ -52,6 +52,7 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@react-three/drei": "^9.113.0",
     "@react-three/fiber": "^8.17.7",
+    "@supabase/supabase-js": "^2.45.4",
     "@tanstack/react-table": "^8.10.7",
     "@types/node": "20.5.7",
     "@types/react": "18.2.21",
@@ -64,6 +65,8 @@
     "date-fns": "^2.30.0",
     "eslint": "8.48.0",
     "eslint-config-next": "^14.0.1",
+    "express": "^4.21.0",
+    "formidable": "^3.5.1",
     "framer-motion": "^11.5.6",
     "lucide-react": "^0.291.0",
     "next": "^14.2.3",
@@ -92,6 +95,7 @@
     "zustand": "^4.4.6"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
     "husky": "^9.0.11",

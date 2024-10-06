@@ -1,6 +1,8 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { createRequest } from '@/lib/crudFunctions/Requests';
+import { Request } from 'express';
+import { supabase } from '@/lib/supabase';
 
 // Handle GET request to fetch requests by staffId
 export async function GET(
@@ -34,7 +36,9 @@ export async function GET(
 
 export async function POST(req: Request) {
   try {
-    const payload = await req.json();
+    const payload = await (
+      req as Request & { json: () => Promise<any> }
+    ).json();
 
     if (
       !payload.staff_id ||
