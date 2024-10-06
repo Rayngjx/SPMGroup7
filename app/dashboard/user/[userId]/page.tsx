@@ -9,6 +9,7 @@ const breadcrumbItems = [
   { title: 'User', link: '/dashboard/user' },
   { title: 'Create', link: '/dashboard/user/create' }
 ];
+console.log('render');
 export default function Page() {
   return (
     <PageContainer scrollable={true}>
