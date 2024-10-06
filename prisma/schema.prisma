@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model approved_dates {
@@ -26,9 +25,9 @@ model requests {
   daterange      DateTime[]       @db.Date
   reason         String?
   approved       String           @db.VarChar(20)
+  document_url   String?          @db.VarChar(255)
   approved_dates approved_dates[]
-  logs           logs[]
-  users          users?                   @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users          users?           @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model role {
@@ -37,33 +36,28 @@ model role {
   users      users[]
 }
 
-model team {
-  team_id     Int    @id @default(autoincrement())
-  team_name   String @db.VarChar(100)
-  team_leader Int?
-  users       users? @relation(fields: [team_leader], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-}
-
 model users {
-  staff_id                      Int                 @id @default(autoincrement())
-  staff_fname                   String              @db.VarChar(100)
-  staff_lname                   String              @db.VarChar(100)
-  department                    String              @db.VarChar(100)
-  position                      String              @db.VarChar(100)
-  country                       String              @db.VarChar(100)
-  email                         String?             @unique @db.VarChar(100)
-  reporting_manager             Int?
-  role_id                       Int?
-  approved_dates                approved_dates[]
-  logs_logs_processor_idTousers logs[]              @relation("logs_processor_idTousers")
-  logs_logs_staff_idTousers     logs[]              @relation("logs_staff_idTousers")
-  requests                      requests[]
-  team                          team[]
-  users                         users?              @relation("usersTousers", fields: [reporting_manager], references: [staff_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_manager")
-  other_users                   users[]             @relation("usersTousers")
-  role                          role?               @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
-  withdraw_requests             withdraw_requests[]
-  withdrawn_dates               withdrawn_dates[]
+  staff_id                                                    Int                   @id @default(autoincrement())
+  staff_fname                                                 String                @db.VarChar(100)
+  staff_lname                                                 String                @db.VarChar(100)
+  department                                                  String                @db.VarChar(100)
+  position                                                    String                @db.VarChar(100)
+  country                                                     String                @db.VarChar(100)
+  email                                                       String?               @unique @db.VarChar(100)
+  reporting_manager                                           Int?
+  role_id                                                     Int
+  temp_replacement                                            Int?
+  approved_dates                                              approved_dates[]
+  delegation_requests_delegation_requests_delegated_toTousers delegation_requests[] @relation("delegation_requests_delegated_toTousers")
+  delegation_requests_delegation_requests_staff_idTousers     delegation_requests[] @relation("delegation_requests_staff_idTousers")
+  logs_logs_processor_idTousers                               logs[]                @relation("logs_processor_idTousers")
+  logs_logs_staff_idTousers                                   logs[]                @relation("logs_staff_idTousers")
+  requests                                                    requests[]
+  users                                                       users?                @relation("usersTousers", fields: [reporting_manager], references: [staff_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_manager")
+  other_users                                                 users[]               @relation("usersTousers")
+  role                                                        role                  @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+  withdraw_requests                                           withdraw_requests[]
+  withdrawn_dates                                             withdrawn_dates[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -74,7 +68,6 @@ model withdraw_requests {
   date                DateTime          @db.Date
   reason              String?
   approved            String            @db.VarChar(20)
-  logs                logs[]
   users               users?            @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
   withdrawn_dates     withdrawn_dates[]
 }
@@ -91,14 +84,24 @@ model withdrawn_dates {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model logs {
-  log_id                         Int                @id @default(autoincrement())
+  log_id                         Int     @id @default(autoincrement())
   staff_id                       Int?
-  request_id                     Int?
-  withdraw_request_id            Int?
+  request_id                     Int
   processor_id                   Int?
   reason                         String?
-  users_logs_processor_idTousers users?             @relation("logs_processor_idTousers", fields: [processor_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  requests                       requests?          @relation(fields: [request_id], references: [request_id], onDelete: NoAction, onUpdate: NoAction)
-  users_logs_staff_idTousers     users?             @relation("logs_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  withdraw_requests              withdraw_requests? @relation(fields: [withdraw_request_id], references: [withdraw_request_id], onDelete: NoAction, onUpdate: NoAction)
+  request_type                   String  @db.VarChar(50)
+  approved                       String? @db.VarChar(20)
+  users_logs_processor_idTousers users?  @relation("logs_processor_idTousers", fields: [processor_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users_logs_staff_idTousers     users?  @relation("logs_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model delegation_requests {
+  delegation_request                            Int        @id @default(autoincrement())
+  staff_id                                      Int?
+  delegated_to                                  Int?
+  approved                                      String?    @db.VarChar(20)
+  date_range                                    DateTime[] @db.Date
+  users_delegation_requests_delegated_toTousers users?     @relation("delegation_requests_delegated_toTousers", fields: [delegated_to], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users_delegation_requests_staff_idTousers     users?     @relation("delegation_requests_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
 }

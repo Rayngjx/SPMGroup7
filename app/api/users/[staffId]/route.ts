@@ -38,7 +38,14 @@ export async function PUT(
 
   try {
     const body = await req.json();
-    const payload = { ...body, staff_id: staffId };
+    const payload = {
+      ...body,
+      staff_id: staffId,
+      email: body.email ?? null,
+      reporting_manager: body.reporting_manager ?? null,
+      temp_replacement: body.temp_replacement ?? null
+    };
+
     const result = await updateUser(payload);
 
     return result.success

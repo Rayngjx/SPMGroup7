@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const logId = parseInt(params.logId);
 
-  if (!logId) {
+  if (isNaN(logId)) {
     return NextResponse.json({ error: 'Invalid logId' }, { status: 400 });
   }
 
