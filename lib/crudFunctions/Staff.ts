@@ -17,7 +17,7 @@ interface UpdateUserPayload {
 
 // Function to get a specific user by staff_id
 export async function getUser({ staff_id }: { staff_id: number }) {
-  const response = await db.users.findMany({
+  const response = await db.users.findUnique({
     where: { staff_id }
   });
   return response ? response : null;

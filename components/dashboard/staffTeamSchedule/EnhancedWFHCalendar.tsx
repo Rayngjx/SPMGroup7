@@ -1,122 +1,188 @@
-// 'use client'
+// 'use client';
 
-// import React, { useState, useEffect, useRef } from 'react'
-// import FullCalendar from '@fullcalendar/react'
-// import dayGridPlugin from '@fullcalendar/daygrid'
-// import timeGridPlugin from '@fullcalendar/timegrid'
-// import interactionPlugin from '@fullcalendar/interaction'
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-// import { Button } from '@/components/ui/button'
-// import { format, isValid, parseISO, isSaturday, isSunday } from 'date-fns'
+// import React, { useState, useEffect, useRef } from 'react';
+// import FullCalendar from '@fullcalendar/react';
+// import dayGridPlugin from '@fullcalendar/daygrid';
+// import timeGridPlugin from '@fullcalendar/timegrid';
+// import interactionPlugin from '@fullcalendar/interaction';
+// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// import {
+//   Table,
+//   TableBody,
+//   TableCell,
+//   TableHead,
+//   TableHeader,
+//   TableRow
+// } from '@/components/ui/table';
+// import { Button } from '@/components/ui/button';
+// import {
+//   format,
+//   isValid,
+//   parseISO,
+//   isSaturday,
+//   isSunday,
+//   isToday,
+//   startOfDay
+// } from 'date-fns';
 
 // interface Staff {
-//   id: number
-//   name: string
-//   position: string
-//   reportingManager: number
-//   wfhDates: string[]
+//   id: number;
+//   name: string;
+//   position: string;
+//   reportingManager: number;
+//   wfhDates: string[];
 // }
 
 // interface TeamScheduleCalendarProps {
-//   currentUser: Staff
-//   departmentStaff: Staff[]
+//   currentUser: Staff;
+//   departmentStaff: Staff[];
 // }
 
-// export default function TeamScheduleCalendar({ currentUser, departmentStaff }: TeamScheduleCalendarProps) {
-//   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-//   const [selectedDateStaff, setSelectedDateStaff] = useState<{ wfh: Staff[], inOffice: Staff[] }>({ wfh: [], inOffice: [] })
-//   const [calendarView, setCalendarView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('dayGridMonth')
-//   const calendarRef = useRef<FullCalendar | null>(null)
+// export default function TeamScheduleCalendar({
+//   currentUser,
+//   departmentStaff
+// }: TeamScheduleCalendarProps) {
+//   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+//   const [selectedDateStaff, setSelectedDateStaff] = useState<{
+//     wfh: Staff[];
+//     inOffice: Staff[];
+//   }>({ wfh: [], inOffice: [] });
+//   const [calendarView, setCalendarView] = useState<
+//     'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'
+//   >('dayGridMonth');
+//   const calendarRef = useRef<FullCalendar | null>(null);
 
 //   const updateSelectedDateStaff = (date: Date) => {
 //     if (!isValid(date)) {
-//       console.error('Invalid date:', date)
-//       return
+//       console.error('Invalid date:', date);
+//       return;
 //     }
-//     const dateString = format(date, 'yyyy-MM-dd')
+//     const dateString = format(date, 'yyyy-MM-dd');
 //     if (isSaturday(date) || isSunday(date)) {
-//       setSelectedDateStaff({ wfh: [], inOffice: [] })
+//       setSelectedDateStaff({ wfh: [], inOffice: [] });
+//       console.log('Updated staff for date:', dateString, { wfh: [], inOffice: [] });
 //     } else {
-//       const wfh = departmentStaff.filter(staff => staff.wfhDates.includes(dateString))
-//       const inOffice = departmentStaff.filter(staff => !staff.wfhDates.includes(dateString))
-//       setSelectedDateStaff({ wfh, inOffice })
+//       const wfh = departmentStaff.filter((staff) =>
+//         staff.wfhDates.some(wfhDate =>
+//           startOfDay(new Date(wfhDate)).getTime() === startOfDay(date).getTime()
+//         )
+//       );
+//       const inOffice = departmentStaff.filter((staff) =>
+//         !staff.wfhDates.some(wfhDate =>
+//           startOfDay(new Date(wfhDate)).getTime() === startOfDay(date).getTime()
+//         )
+//       );
+//       setSelectedDateStaff({ wfh, inOffice });
+//       console.log('Updated staff for date:', dateString, { wfh, inOffice });
 //     }
-//   }
+//   };
 
 //   const handleDateClick = (arg: { date: Date | string }) => {
-//     const newDate = arg.date instanceof Date ? arg.date : parseISO(arg.date as string)
+//     const newDate =
+//       arg.date instanceof Date ? arg.date : parseISO(arg.date as string);
 //     if (isValid(newDate)) {
-//       setSelectedDate(newDate)
-//       updateSelectedDateStaff(newDate)
+//       setSelectedDate(newDate);
+//       updateSelectedDateStaff(newDate);
 //     } else {
-//       console.error('Invalid date selected:', arg.date)
+//       console.error('Invalid date selected:', arg.date);
 //     }
-//   }
+//   };
 
 //   const handleTodayClick = () => {
-//     const today = new Date()
-//     setSelectedDate(today)
-//     updateSelectedDateStaff(today)
+//     const today = new Date();
+//     setSelectedDate(today);
+//     updateSelectedDateStaff(today);
 //     if (calendarRef.current) {
-//       const calendarApi = calendarRef.current.getApi()
-//       calendarApi.today()
+//       const calendarApi = calendarRef.current.getApi();
+//       calendarApi.today();
 //     }
-//   }
+//   };
 
-//   const handleViewChange = (view: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay') => {
-//     setCalendarView(view)
+//   const handleViewChange = (
+//     view: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'
+//   ) => {
+//     setCalendarView(view);
 //     if (calendarRef.current) {
-//       const calendarApi = calendarRef.current.getApi()
-//       calendarApi.changeView(view)
+//       const calendarApi = calendarRef.current.getApi();
+//       calendarApi.changeView(view);
 //     }
-//   }
+//   };
 
 //   const dayCellDidMount = (arg: { date: Date; el: HTMLElement }) => {
-//     const { date, el } = arg
+//     const { date, el } = arg;
 //     if (isSaturday(date) || isSunday(date)) {
-//       el.style.background = 'white'
-//       return
+//       el.style.background = 'white';
+//       return;
 //     }
 
-//     const dateString = format(date, 'yyyy-MM-dd')
-//     const inOfficeCount = departmentStaff.filter(staff => !staff.wfhDates.includes(dateString)).length
-//     const totalStaff = departmentStaff.length
+//     const wfhCount = departmentStaff.filter((staff) =>
+//       staff.wfhDates.some(wfhDate =>
+//         startOfDay(new Date(wfhDate)).getTime() === startOfDay(date).getTime()
+//       )
+//     ).length;
+//     const totalStaff = departmentStaff.length;
 
-//     const inOfficeRatio = inOfficeCount / totalStaff
-//     const opacity = inOfficeRatio.toFixed(2) // Convert to a string with 2 decimal places
+//     const wfhRatio = wfhCount / totalStaff;
+//     const opacity = Math.max(0.1, wfhRatio).toFixed(2); // Ensure minimum opacity of 0.1
 
-//     el.style.background = `rgba(96, 165, 250, ${opacity})`
-//   }
+//     el.style.background = `rgba(52, 211, 153, ${opacity})`; // Green for WFH
+
+//     if (isToday(date)) {
+//       el.style.border = '2px solid #3B82F6'; // Blue border for today's date
+//     }
+//   };
 
 //   useEffect(() => {
-//     updateSelectedDateStaff(selectedDate)
-//   }, [selectedDate, departmentStaff])
+//     updateSelectedDateStaff(selectedDate);
+//   }, [selectedDate, departmentStaff]);
 
-//   const calendarEvents = departmentStaff.flatMap(staff =>
+//   const calendarEvents = departmentStaff.flatMap((staff) =>
 //     staff.wfhDates
-//       .filter(date => {
-//         const dateObj = new Date(date)
-//         return !isSaturday(dateObj) && !isSunday(dateObj)
+//       .filter((date) => {
+//         const dateObj = new Date(date);
+//         return !isSaturday(dateObj) && !isSunday(dateObj);
 //       })
-//       .map(date => ({
+//       .map((date) => ({
 //         title: `${staff.name} - WFH`,
 //         date: date,
-//         color: 'transparent',
-//         textColor: 'black'
+//         color: 'rgba(52, 211, 153, 0.5)', // Light green background
+//         textColor: 'black',
+//         className: 'text-xs p-1 rounded'
 //       }))
-//   )
+//   );
+
+//   console.log('Calendar Events:', calendarEvents);
+//   console.log('Department Staff:', departmentStaff);
 
 //   return (
 //     <div className="grid grid-cols-3 gap-6">
 //       <Card className="col-span-2 shadow-sm">
 //         <CardHeader>
-//           <CardTitle className="flex justify-between items-center">
+//           <CardTitle className="flex items-center justify-between">
 //             <span>Team Schedule Calendar</span>
 //             <div className="space-x-2">
-//               <Button onClick={() => handleViewChange('dayGridMonth')} variant={calendarView === 'dayGridMonth' ? 'default' : 'outline'}>Month</Button>
-//               <Button onClick={() => handleViewChange('timeGridWeek')} variant={calendarView === 'timeGridWeek' ? 'default' : 'outline'}>Week</Button>
-//               <Button onClick={() => handleViewChange('timeGridDay')} variant={calendarView === 'timeGridDay' ? 'default' : 'outline'}>Day</Button>
+//               <Button
+//                 onClick={() => handleViewChange('dayGridMonth')}
+//                 variant={
+//                   calendarView === 'dayGridMonth' ? 'default' : 'outline'
+//                 }
+//               >
+//                 Month
+//               </Button>
+//               <Button
+//                 onClick={() => handleViewChange('timeGridWeek')}
+//                 variant={
+//                   calendarView === 'timeGridWeek' ? 'default' : 'outline'
+//                 }
+//               >
+//                 Week
+//               </Button>
+//               <Button
+//                 onClick={() => handleViewChange('timeGridDay')}
+//                 variant={calendarView === 'timeGridDay' ? 'default' : 'outline'}
+//               >
+//                 Day
+//               </Button>
 //               <Button onClick={handleTodayClick}>Today</Button>
 //             </div>
 //           </CardTitle>
@@ -138,6 +204,13 @@
 //               selectable={true}
 //               select={handleDateClick}
 //               events={calendarEvents}
+//               eventContent={(eventInfo) => {
+//                 return (
+//                   <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs p-1 rounded bg-green-200">
+//                     {eventInfo.event.title}
+//                   </div>
+//                 );
+//               }}
 //             />
 //           </div>
 //         </CardContent>
@@ -145,7 +218,10 @@
 //       <Card className="shadow-sm">
 //         <CardHeader>
 //           <CardTitle>
-//             Staff Status for {isValid(selectedDate) ? format(selectedDate, 'MMMM d, yyyy') : 'Invalid Date'}
+//             Staff Status for{' '}
+//             {isValid(selectedDate)
+//               ? format(selectedDate, 'MMMM d, yyyy')
+//               : 'Invalid Date'}
 //           </CardTitle>
 //         </CardHeader>
 //         <CardContent>
@@ -154,7 +230,7 @@
 //           ) : (
 //             <div className="space-y-4">
 //               <div>
-//                 <h3 className="font-semibold mb-2">Working From Home</h3>
+//                 <h3 className="mb-2 font-semibold">Working From Home</h3>
 //                 {selectedDateStaff.wfh.length > 0 ? (
 //                   <Table>
 //                     <TableHeader>
@@ -177,7 +253,7 @@
 //                 )}
 //               </div>
 //               <div>
-//                 <h3 className="font-semibold mb-2">In Office</h3>
+//                 <h3 className="mb-2 font-semibold">In Office</h3>
 //                 {selectedDateStaff.inOffice.length > 0 ? (
 //                   <Table>
 //                     <TableHeader>
@@ -204,12 +280,13 @@
 //         </CardContent>
 //       </Card>
 //     </div>
-//   )
+//   );
 // }
 
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -230,7 +307,8 @@ import {
   parseISO,
   isSaturday,
   isSunday,
-  isToday
+  isToday,
+  startOfDay
 } from 'date-fns';
 
 interface Staff {
@@ -250,6 +328,7 @@ export default function TeamScheduleCalendar({
   currentUser,
   departmentStaff
 }: TeamScheduleCalendarProps) {
+  const { data: session, status } = useSession();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedDateStaff, setSelectedDateStaff] = useState<{
     wfh: Staff[];
@@ -268,14 +347,28 @@ export default function TeamScheduleCalendar({
     const dateString = format(date, 'yyyy-MM-dd');
     if (isSaturday(date) || isSunday(date)) {
       setSelectedDateStaff({ wfh: [], inOffice: [] });
+      console.log('Updated staff for date:', dateString, {
+        wfh: [],
+        inOffice: []
+      });
     } else {
       const wfh = departmentStaff.filter((staff) =>
-        staff.wfhDates.includes(dateString)
+        staff.wfhDates.some(
+          (wfhDate) =>
+            startOfDay(new Date(wfhDate)).getTime() ===
+            startOfDay(date).getTime()
+        )
       );
       const inOffice = departmentStaff.filter(
-        (staff) => !staff.wfhDates.includes(dateString)
+        (staff) =>
+          !staff.wfhDates.some(
+            (wfhDate) =>
+              startOfDay(new Date(wfhDate)).getTime() ===
+              startOfDay(date).getTime()
+          )
       );
       setSelectedDateStaff({ wfh, inOffice });
+      console.log('Updated staff for date:', dateString, { wfh, inOffice });
     }
   };
 
@@ -317,19 +410,21 @@ export default function TeamScheduleCalendar({
       return;
     }
 
-    const dateString = format(date, 'yyyy-MM-dd');
-    const inOfficeCount = departmentStaff.filter(
-      (staff) => !staff.wfhDates.includes(dateString)
+    const wfhCount = departmentStaff.filter((staff) =>
+      staff.wfhDates.some(
+        (wfhDate) =>
+          startOfDay(new Date(wfhDate)).getTime() === startOfDay(date).getTime()
+      )
     ).length;
     const totalStaff = departmentStaff.length;
 
-    const inOfficeRatio = inOfficeCount / totalStaff;
-    const opacity = inOfficeRatio.toFixed(2); // Convert to a string with 2 decimal places
+    const wfhRatio = wfhCount / totalStaff;
+    const opacity = Math.max(0.1, wfhRatio).toFixed(2); // Ensure minimum opacity of 0.1
 
-    el.style.background = `rgba(96, 165, 250, ${opacity})`;
+    el.style.background = `rgba(52, 211, 153, ${opacity})`; // Green for WFH
 
     if (isToday(date)) {
-      el.style.backgroundColor = 'rgba(209, 213, 219, 0.5)'; // Light grey for today's date
+      el.style.border = '2px solid #3B82F6'; // Blue border for today's date
     }
   };
 
@@ -346,10 +441,28 @@ export default function TeamScheduleCalendar({
       .map((date) => ({
         title: `${staff.name} - WFH`,
         date: date,
-        color: 'transparent',
-        textColor: 'black'
+        color: 'rgba(52, 211, 153, 0.5)', // Light green background
+        textColor: 'black',
+        className: 'text-xs p-1 rounded'
       }))
   );
+
+  if (status === 'loading') {
+    return <div>Loading...</div>;
+  }
+
+  if (!session || session.user.role_id !== 2) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Access Denied</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>You do not have permission to view this page.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid grid-cols-3 gap-6">
@@ -403,7 +516,7 @@ export default function TeamScheduleCalendar({
               events={calendarEvents}
               eventContent={(eventInfo) => {
                 return (
-                  <div className="overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+                  <div className="overflow-hidden text-ellipsis whitespace-nowrap rounded bg-green-200 p-1 text-xs">
                     {eventInfo.event.title}
                   </div>
                 );
