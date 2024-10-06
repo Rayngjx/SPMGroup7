@@ -226,7 +226,12 @@ export default function Component_Roles({ dataRoles }: { dataRoles: any }) {
                 {/* <h1 className="text-3xl font-bold">Team Members</h1>
                 <p className="text-muted-foreground mt-1">Add or remove team members to collaborate.</p> */}
               </div>
-              <Button className="bg-purple-600 hover:bg-purple-700">
+              <Button
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={() => {
+                  setIsAddUserDialogOpen(true);
+                }}
+              >
                 <UserPlus className="mr-2 h-4 w-4" /> {'Add Roles'}
               </Button>
             </div>
