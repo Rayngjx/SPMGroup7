@@ -136,6 +136,12 @@ export const navItems: NavItem[] = [
     label: 'TeamSchedule'
   },
   {
+    title: 'Manager',
+    href: '/dashboard/manager-team-schedule',
+    icon: 'laptop',
+    label: 'ManagerTeamSchedule'
+  },
+  {
     title: 'Employee',
     href: '/dashboard/employee',
     icon: 'employee',
