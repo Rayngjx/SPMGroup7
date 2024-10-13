@@ -8,6 +8,7 @@ interface RequestsPayload {
   daterange: string[]; // Change this to an array of strings for multiple dates
   reason?: string;
   approved: string;
+  document_url?: string;
 }
 
 // Get all requests
@@ -55,18 +56,33 @@ export async function getTeamRequests(managerStaffId: number) {
 
 // Create a new request
 export async function createRequest(payload: RequestsPayload) {
-  const response = await db.requests.create({
-    data: {
-      staff_id: payload.staff_id,
-      timeslot: payload.timeslot,
-      daterange: payload.daterange.map((date) => new Date(date)), // Ensure dates are converted to Date objects
-      reason: payload.reason,
-      approved: payload.approved
+  try {
+    const response = await db.requests.create({
+      data: {
+        staff_id: payload.staff_id,
+        timeslot: payload.timeslot,
+        daterange: payload.daterange.map((date) => new Date(date)),
+        reason: payload.reason,
+        approved: payload.approved,
+        document_url: payload.document_url // Make sure to include this if it's part of your schema
+      }
+    });
+    return { success: true, request: response };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // The .code property can be accessed in a type-safe manner
+      if (error.code === 'P2002') {
+        return {
+          success: false,
+          error: 'A unique constraint would be violated.'
+        };
+      }
     }
-  });
-  return response
-    ? { success: true, request: response }
-    : { success: false, error: 'Failed to create request!' };
+    return {
+      success: false,
+      error: `Failed to create request: ${error.message}`
+    };
+  }
 }
 
 // Update an existing request

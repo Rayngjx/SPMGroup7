@@ -56,7 +56,7 @@ export default function CreateRequestForm() {
     setIsSubmitting(true);
 
     try {
-      let documentUrl = null; // To store the document URL or ID
+      let documentUrl = null;
 
       // 1. Upload the document (if it exists)
       if (data.document) {
@@ -69,22 +69,28 @@ export default function CreateRequestForm() {
         });
 
         if (!uploadResponse.ok) {
-          const uploadErrorData = await uploadResponse.json();
-          throw new Error(uploadErrorData.error || 'Document upload failed');
+          const contentType = uploadResponse.headers.get('content-type');
+          if (contentType && contentType.indexOf('application/json') !== -1) {
+            const uploadErrorData = await uploadResponse.json();
+            throw new Error(uploadErrorData.error || 'Document upload failed');
+          } else {
+            const textError = await uploadResponse.text();
+            throw new Error(`Document upload failed: ${textError}`);
+          }
         }
 
         const uploadData = await uploadResponse.json();
-        documentUrl = uploadData.url; // Assuming the response contains a `url` for the uploaded document
+        documentUrl = uploadData.url;
       }
 
-      // 2. Submit the form data (timeslot, daterange, reason, staff_id, document URL)
+      // 2. Submit the form data
       const formDataPayload = {
-        staff_id: Number(session?.user?.staff_id), // Ensure staff_id is a number
+        staff_id: Number(session?.user?.staff_id),
         timeslot: data.timeslot,
         daterange: JSON.stringify([data.daterange?.from, data.daterange?.to]),
         reason: data.reason,
         approved: 'Pending',
-        document_url: documentUrl // Tag the document URL with the request
+        document_url: documentUrl
       };
 
       const response = await fetch(
@@ -110,6 +116,7 @@ export default function CreateRequestForm() {
 
       form.reset();
     } catch (error) {
+      console.error('Error:', error);
       toast({
         title: 'Error',
         description:

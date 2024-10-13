@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createRequest } from '@/lib/crudFunctions/Requests';
 import { Request } from 'express';
 import { supabase } from '@/lib/supabase';
+import { NextRequest } from 'next/server';
 
 // Handle GET request to fetch requests by staffId
 export async function GET(
@@ -34,11 +35,9 @@ export async function GET(
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const payload = await (
-      req as Request & { json: () => Promise<any> }
-    ).json();
+    const payload = await req.json();
 
     if (
       !payload.staff_id ||
@@ -54,12 +53,16 @@ export async function POST(req: Request) {
 
     const result = await createRequest(payload);
 
-    return result.success
-      ? NextResponse.json(result.request, { status: 201 })
-      : NextResponse.json({ error: result.error }, { status: 500 });
+    if (result.success) {
+      return NextResponse.json(result.request, { status: 201 });
+    } else {
+      console.error('Failed to create request:', result.error);
+      return NextResponse.json({ error: result.error }, { status: 500 });
+    }
   } catch (error) {
+    console.error('Unexpected error in POST handler:', error);
     return NextResponse.json(
-      { error: 'Failed to create request' },
+      { error: 'An unexpected error occurred' },
       { status: 500 }
     );
   }

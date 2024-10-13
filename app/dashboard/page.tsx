@@ -24,10 +24,9 @@ import CreateRequestForm from '@/components/forms/create-request/wfh-request';
 
 export default async function page() {
   const session = await auth();
-  console.log('Session: ', session); // Debug the session object
+  // console.log('Session: ', session); // Debug the session object
   // let getUsers;
   if (!session) {
-    console.log('No session found');
     return <p>Please log in to view this page.</p>;
   }
 
@@ -36,8 +35,7 @@ export default async function page() {
     try {
       const getUsers = await db.users.findMany({
         where: { staff_id: staffId }
-      });
-      console.log(getUsers); // Log retrieved users for debugging
+      }); // Log retrieved users for debugging
     } catch (error) {
       console.error(error);
     }
