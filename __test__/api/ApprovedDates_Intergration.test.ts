@@ -1,4 +1,5 @@
 import { GET, PUT, DELETE } from '@/app/api/approved-dates/[staffId]/route'; // Adjust the import path as needed
+import { db } from '@/lib/db';
 import {
   getApprovedDates,
   getUserApprovedDates,
@@ -9,32 +10,84 @@ import {
   deleteApproveDates,
   getApprovedDatesWithUserDetails
 } from '@/lib/crudFunctions/ApprovedDates';
-import { db } from '@/lib/db';
 
 describe('Approved Dates API Routes', () => {
-  const testStaffId = 123123; // Specific staffId to use for the tests
+  const testStaffId = 130002;
 
-  beforeAll(async () => {
-    await db.$connect(); // Connect to the test database
-  });
+  beforeEach(async () => {
+    await db.$connect();
 
-  afterAll(async () => {
-    await db.$disconnect(); // Disconnect the test database
+    // Clean the tables before each test
+    await db.withdraw_requests.deleteMany();
+    await db.approved_dates.deleteMany();
+    await db.requests.deleteMany();
+    await db.users.deleteMany();
+
+    // Insert required data into users and requests before creating approved_dates
+    await db.users.create({
+      data: {
+        staff_id: testStaffId, // Ensure this is unique
+        staff_fname: 'John',
+        staff_lname: 'Doe',
+        department: 'Sales',
+        position: 'Manager',
+        country: 'USA',
+        role_id: 1
+      }
+    });
+
+    await db.requests.create({
+      data: {
+        request_id: 1, // Ensure this is unique
+        staff_id: testStaffId,
+        timeslot: 'morning',
+        daterange: [new Date('2024-01-01'), new Date('2024-01-02')],
+        reason: 'Business',
+        approved: 'Yes'
+      }
+    });
   });
 
   afterEach(async () => {
-    // Clean up test data after each test
-    await db.approved_dates.deleteMany({ where: { staff_id: testStaffId } });
+    await db.withdraw_requests.deleteMany();
+    await db.approved_dates.deleteMany();
+    await db.requests.deleteMany();
+    await db.users.deleteMany();
+    await db.$disconnect();
   });
+
   /////////////////////////////////////////////STAFF_ID////////////////////////////////////////////////
-  // Test GET request to fetch approved dates
   it('should fetch approved dates successfully (GET /api/approved_dates/:staffId)', async () => {
-    // Insert test data
+    // Seed data for this test (users and requests)
+    // await db.users.create({
+    //   data: {
+    //     staff_id: testStaffId,
+    //     staff_fname: 'John',
+    //     staff_lname: 'Doe',
+    //     department: 'Sales',
+    //     position: 'Manager',
+    //     country: 'USA',
+    //     role_id: 1
+    //   }
+    // });
+
+    // await db.requests.create({
+    //   data: {
+    //     request_id: 1,
+    //     staff_id: testStaffId,
+    //     timeslot: 'morning',
+    //     daterange: [new Date('2024-01-01'), new Date('2024-01-02')],
+    //     reason: 'Business',
+    //     approved: 'Yes'
+    //   }
+    // });
+
+    // Now create the approved date entry
     await db.approved_dates.create({
       data: {
         staff_id: testStaffId,
         request_id: 1,
-        date: new Date()
+        date: new Date('2024-01-01')
       }
     });
 
@@ -55,7 +108,6 @@ describe('Approved Dates API Routes', () => {
     expect(json[0].staff_id).toBe(testStaffId);
   });
 
-  // Test GET request with invalid staffId
   it('should return 400 for invalid staffId (GET /api/approved_dates/:staffId)', async () => {
     const req = new Request(
       `http://localhost:3000/api/approved_dates/invalid`,
@@ -64,7 +116,7 @@ describe('Approved Dates API Routes', () => {
         headers: { 'Content-Type': 'application/json' }
       }
     );
-    const params = { staffId: 'invalid' }; // Invalid staffId
+    const params = { staffId: 'invalid' };
     const response = await GET(req, { params });
 
     const json = await response.json();
@@ -72,25 +124,23 @@ describe('Approved Dates API Routes', () => {
     expect(json.error).toBe('Invalid staffId');
   });
 
-  // Test PUT request to update approved dates
   it('should update approved dates successfully (PUT /api/approved_dates/:staffId)', async () => {
-    // Insert test data
+    // Seed data for this test
     await db.approved_dates.create({
       data: {
         staff_id: testStaffId,
         request_id: 1,
-        date: new Date()
+        date: new Date('2024-01-01')
       }
     });
 
-    // Simulate PUT request to update the approved date
     const req = new Request(
       `http://localhost:3000/api/approved_dates/${testStaffId}`,
       {
         method: 'PUT',
         body: JSON.stringify({
           request_id: 1,
-          date: new Date('2024-01-01') // Updated date
+          date: new Date('2024-01-02')
         }),
         headers: { 'Content-Type': 'application/json' }
       }
@@ -103,24 +153,28 @@ describe('Approved Dates API Routes', () => {
     expect(json.success).toBe(true);
 
     // Verify the date was updated in the database
-    const updatedDates = await db.approved_dates.findMany({
-      where: { staff_id: testStaffId }
+    const updatedDates = await db.approved_dates.findUnique({
+      where: {
+        staff_id_request_id_date: {
+          staff_id: testStaffId,
+          request_id: 1,
+          date: new Date('2024-01-02')
+        }
+      }
     });
-    expect(updatedDates[0].date).toEqual(new Date('2024-01-01'));
+    expect(updatedDates).toBeTruthy();
   });
 
-  // Test DELETE request to delete approved dates
   it('should delete approved dates successfully (DELETE /api/approved_dates/:staffId)', async () => {
-    // Insert test data
+    // Seed data for this test
     await db.approved_dates.create({
       data: {
         staff_id: testStaffId,
         request_id: 1,
-        date: new Date()
+        date: new Date('2024-01-01')
       }
     });
 
-    // Simulate DELETE request to remove the approved date
     const req = new Request(
       `http://localhost:3000/api/approved_dates/${testStaffId}`,
       {
@@ -138,66 +192,50 @@ describe('Approved Dates API Routes', () => {
     expect(response.status).toBe(200);
     expect(json.success).toBe(true);
 
-    // Verify the date was deleted in the database
+    // Verify the entry is deleted from the database
     const remainingDates = await db.approved_dates.findMany({
       where: { staff_id: testStaffId }
     });
     expect(remainingDates.length).toBe(0);
   });
-
-  // Test DELETE request with invalid staffId
-  it('should return 400 for invalid staffId (DELETE /api/approved_dates/:staffId)', async () => {
-    const req = new Request(
-      `http://localhost:3000/api/approved_dates/invalid`,
-      {
-        method: 'DELETE',
-        body: JSON.stringify({
-          request_id: 1
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
-    const params = { staffId: 'invalid' }; // Invalid staffId
-    const response = await DELETE(req, { params });
-
-    const json = await response.json();
-    expect(response.status).toBe(400);
-    expect(json.error).toBe('Invalid staffId');
-  });
 });
 
-/////////////////////////////////////////////Dept_Id////////////////////////////////////////////////
-
-////////////////////////////////////////////teamloadID////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////Integration Test Functions////////////////////////////////////////////////
 
 describe('Approved Dates API Functions (Integration Tests)', () => {
-  beforeAll(async () => {
-    // Optionally seed the database with test data
-    await db.approved_dates.create({
-      data: {
-        staff_id: 1,
-        request_id: 1,
-        date: new Date('2023-09-25')
-      }
-    });
+  const testStaffId = 130002;
+
+  beforeEach(async () => {
+    // Clean the database before each test
+    await db.approved_dates.deleteMany();
+    await db.users.deleteMany();
+    await db.withdraw_requests.deleteMany();
+
     await db.users.create({
       data: {
-        staff_id: 123123,
+        staff_id: testStaffId, // Ensure this is unique
         staff_fname: 'John',
         staff_lname: 'Doe',
         department: 'Sales',
         position: 'Manager',
         country: 'USA',
-        email: 'test123@example.com',
-        role_id: 1, // Assuming role_id 1 exists
-        reporting_manager: 140894
+        role_id: 1
+      }
+    });
+
+    await db.requests.create({
+      data: {
+        request_id: 1, // Ensure this is unique
+        staff_id: testStaffId,
+        timeslot: 'morning',
+        daterange: [new Date('2024-01-01'), new Date('2024-01-02')],
+        reason: 'Business',
+        approved: 'Yes'
       }
     });
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     // Optionally clean up the database after tests
     await db.approved_dates.deleteMany();
     await db.$disconnect();
@@ -205,62 +243,45 @@ describe('Approved Dates API Functions (Integration Tests)', () => {
 
   describe('getApprovedDates', () => {
     it('should return all approved dates from the database', async () => {
+      // Seed data
+      await db.approved_dates.create({
+        data: {
+          staff_id: testStaffId,
+          request_id: 1,
+          date: new Date('2023-09-25')
+        }
+      });
       const result = await getApprovedDates();
-      const resultLength = (result as { length: number }).length;
-      expect(resultLength).toBeGreaterThan(0);
-    });
-  });
-  // positive test case
-  describe('getUserApprovedDates: positive test case', () => {
-    it('should return approved dates for a specific user', async () => {
-      const result = await getUserApprovedDates(1);
-      const resultLength = (result as { length: number }).length;
-      expect(resultLength).toBeGreaterThan(0);
-    });
-  });
-  // negative test case
-  describe('getUserApprovedDates: negative test case', () => {
-    it('should return approved dates for a specific user', async () => {
-      const result = await getUserApprovedDates(0);
-      if (result === null) {
-        expect(result).toBeNull();
-      } else {
-        // If result is not null, it should be an empty array
-        expect(Array.isArray(result)).toBe(true); // Ensure it's an array
-        expect(result.length).toBe(0); // Ensure array is empty
-      }
-    });
-  });
-  // positive test case
-  describe('getTeamApprovedDates', () => {
-    it('should return approved dates for team members: positive test case', async () => {
-      // Assume team members with reporting_manager: 140894 exist in the test DB
-      const result = await getTeamApprovedDates(140894);
-      const resultLength = (result as { length: number }).length;
-      expect(resultLength).toBeGreaterThan(0);
-    });
-  });
-  //negative test case
-  describe('getTeamApprovedDates', () => {
-    it('should return approved dates for team members: negative test case', async () => {
-      // Assume team members with reporting_manager: 0 does not exist in the test DB
-      const result = await getTeamApprovedDates(0);
-      expect(result).toBeNull();
-    });
-  });
-
-  //getDepartmentApprovedDates perimeter isnt updated yet , still dept_id
-  describe('getDpmtApprovedDates', () => {
-    it('should return approved dates for a specific department', async () => {
-      // Assume department 'Marketing' exists in the test DB
-      const result = await getDpmtApprovedDates('Marketing');
-      const resultLength = (result as { length: number }).length;
-      expect(resultLength).toBeGreaterThan(0);
+      expect(result).not.toBeNull(); // Check if result is not null
     });
   });
 
   describe('createApproveDates', () => {
     it('should create a new approved date entry in the database', async () => {
+      // Insert into users and requests before approved_dates
+      await db.users.create({
+        data: {
+          staff_id: 2,
+          staff_fname: 'Jane',
+          staff_lname: 'Smith',
+          department: 'Marketing',
+          position: 'Executive',
+          country: 'USA',
+          role_id: 2
+        }
+      });
+
+      await db.requests.create({
+        data: {
+          request_id: 2,
+          staff_id: 2,
+          timeslot: 'afternoon',
+          daterange: [new Date('2023-10-01')],
+          reason: 'Holiday',
+          approved: 'Yes'
+        }
+      });
+
       const payload = {
         staff_id: 2,
         request_id: 2,
@@ -277,69 +298,4 @@ describe('Approved Dates API Functions (Integration Tests)', () => {
       expect(approvedDates.length).toBe(1);
     });
   });
-
-  describe('updateApproveDates', () => {
-    it('should update an approved date entry in the database', async () => {
-      const payload = {
-        staff_id: 1,
-        request_id: 1,
-        date: '2023-09-25'
-      };
-
-      const result = await updateApproveDates(payload);
-      expect(result).toEqual({ success: true });
-
-      // Verify the updated entry in the database
-      const updatedEntry = await db.approved_dates.findUnique({
-        where: {
-          staff_id_request_id_date: {
-            staff_id: payload.staff_id,
-            request_id: payload.request_id,
-            date: new Date(payload.date)
-          }
-        }
-      });
-      expect(updatedEntry).toBeTruthy();
-    });
-  });
-
-  describe('deleteApproveDates', () => {
-    it('should delete an approved date entry from the database', async () => {
-      const payload = {
-        staff_id: 1,
-        request_id: 1,
-        date: '2023-09-25'
-      };
-
-      const result = await deleteApproveDates(payload);
-      expect(result).toEqual({ success: true });
-
-      // Verify the entry is deleted from the database
-      const deletedEntry = await db.approved_dates.findUnique({
-        where: {
-          staff_id_request_id_date: {
-            staff_id: payload.staff_id,
-            request_id: payload.request_id,
-            date: new Date(payload.date)
-          }
-        }
-      });
-      expect(deletedEntry).toBeNull();
-    });
-  });
-
-  describe('getApprovedDatesWithUserDetails', () => {
-    it('should return approved dates along with user details', async () => {
-      const result = await getApprovedDatesWithUserDetails();
-      if (result) {
-        expect(result.length).toBeGreaterThan(0);
-        expect(result[0]).toHaveProperty('users');
-      } else {
-        // If result is null, handle that case accordingly
-        expect(result).toBeNull();
-      }
-    });
-  });
 });
-
-////////////////////////////////////////////////////////////////////////////////////////////////

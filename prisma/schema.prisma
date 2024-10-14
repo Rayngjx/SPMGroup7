@@ -11,13 +11,12 @@ model approved_dates {
   staff_id   Int
   request_id Int
   date       DateTime @db.Date
-  requests   requests @relation(fields: [request_id], references: [request_id], onDelete: NoAction, onUpdate: NoAction)
-  users      users    @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  requests   requests @relation(fields: [request_id], references: [request_id], onDelete: Cascade, onUpdate: NoAction)
+  users      users    @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@id([staff_id, request_id, date])
+  @@id([staff_id, request_id, date]) // Composite key for approved_dates
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model requests {
   request_id     Int              @id @default(autoincrement())
   staff_id       Int?
@@ -26,63 +25,71 @@ model requests {
   reason         String?
   approved       String           @db.VarChar(20)
   document_url   String?          @db.VarChar(255)
-  approved_dates approved_dates[]
-  users          users?           @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  approved_dates approved_dates[] 
+  users          users?           @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model role {
   role_id    Int     @id @default(autoincrement())
   role_title String  @db.VarChar(100)
-  users      users[]
+  users      users[] 
 }
 
 model users {
-  staff_id                                                    Int                   @id @default(autoincrement())
-  staff_fname                                                 String                @db.VarChar(100)
-  staff_lname                                                 String                @db.VarChar(100)
-  department                                                  String                @db.VarChar(100)
-  position                                                    String                @db.VarChar(100)
-  country                                                     String                @db.VarChar(100)
-  email                                                       String?               @unique @db.VarChar(100)
-  reporting_manager                                           Int?
-  role_id                                                     Int
-  temp_replacement                                            Int?
-  approved_dates                                              approved_dates[]
-  delegation_requests_delegation_requests_delegated_toTousers delegation_requests[] @relation("delegation_requests_delegated_toTousers")
-  delegation_requests_delegation_requests_staff_idTousers     delegation_requests[] @relation("delegation_requests_staff_idTousers")
-  logs_logs_processor_idTousers                               logs[]                @relation("logs_processor_idTousers")
-  logs_logs_staff_idTousers                                   logs[]                @relation("logs_staff_idTousers")
-  requests                                                    requests[]
-  users                                                       users?                @relation("usersTousers", fields: [reporting_manager], references: [staff_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_manager")
-  other_users                                                 users[]               @relation("usersTousers")
-  role                                                        role                  @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
-  withdraw_requests                                           withdraw_requests[]
-  withdrawn_dates                                             withdrawn_dates[]
+  staff_id    Int                   @id @default(autoincrement())
+  staff_fname String                @db.VarChar(100)
+  staff_lname String                @db.VarChar(100)
+  department  String                @db.VarChar(100)
+  position    String                @db.VarChar(100)
+  country     String                @db.VarChar(100)
+  email       String?               @unique @db.VarChar(100)
+  reporting_manager Int?
+  role_id     Int
+  temp_replacement Int?
+
+  // Other relations
+  approved_dates   approved_dates[] 
+  requests         requests[] 
+  withdraw_requests withdraw_requests[]
+  withdrawn_dates  withdrawn_dates[] 
+
+  // Unique relation names for logs
+  logs_as_processor logs[] @relation("logsProcessorRelation")
+  logs_as_staff     logs[] @relation("logsStaffRelation")
+
+  // Unique relation names for delegation_requests
+  delegation_requests_as_delegated_to delegation_requests[] @relation("delegatedToRelation")
+  delegation_requests_as_staff delegation_requests[] @relation("staffRelation")
+
+  // Self-referencing relation for reporting manager
+  users              users?              @relation("usersTousers", fields: [reporting_manager], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
+  other_users        users[]             @relation("usersTousers")
+
+  // Role relation
+  role role @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model withdraw_requests {
   withdraw_request_id Int               @id @default(autoincrement())
-  staff_id            Int?
+  staff_id            Int               // Foreign key to users
   timeslot            String?           @db.VarChar(20)
   date                DateTime          @db.Date
   reason              String?
   approved            String            @db.VarChar(20)
-  users               users?            @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  withdrawn_dates     withdrawn_dates[]
+  users               users             @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
+  withdrawn_dates     withdrawn_dates[] 
 }
 
 model withdrawn_dates {
   staff_id            Int
   withdraw_request_id Int
   date                DateTime          @db.Date
-  users               users             @relation(fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  withdraw_requests   withdraw_requests @relation(fields: [withdraw_request_id], references: [withdraw_request_id], onDelete: NoAction, onUpdate: NoAction)
+  users               users             @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
+  withdraw_requests   withdraw_requests @relation(fields: [withdraw_request_id], references: [withdraw_request_id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@id([staff_id, withdraw_request_id, date])
+  @@id([staff_id, withdraw_request_id, date]) // Composite key
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model logs {
   log_id                         Int     @id @default(autoincrement())
   staff_id                       Int?
@@ -91,17 +98,20 @@ model logs {
   reason                         String?
   request_type                   String  @db.VarChar(50)
   approved                       String? @db.VarChar(20)
-  users_logs_processor_idTousers users?  @relation("logs_processor_idTousers", fields: [processor_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  users_logs_staff_idTousers     users?  @relation("logs_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // Use the same relation names here
+  users_logs_processor_idTousers users?  @relation("logsProcessorRelation", fields: [processor_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
+  users_logs_staff_idTousers     users?  @relation("logsStaffRelation", fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model delegation_requests {
   delegation_request                            Int        @id @default(autoincrement())
   staff_id                                      Int?
   delegated_to                                  Int?
   approved                                      String?    @db.VarChar(20)
   date_range                                    DateTime[] @db.Date
-  users_delegation_requests_delegated_toTousers users?     @relation("delegation_requests_delegated_toTousers", fields: [delegated_to], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  users_delegation_requests_staff_idTousers     users?     @relation("delegation_requests_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Use the same relation names here
+  users_delegation_requests_delegated_toTousers users?     @relation("delegatedToRelation", fields: [delegated_to], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
+  users_delegation_requests_staff_idTousers     users?     @relation("staffRelation", fields: [staff_id], references: [staff_id], onDelete: Cascade, onUpdate: NoAction)
 }
