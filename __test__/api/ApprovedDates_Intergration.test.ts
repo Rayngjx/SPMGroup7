@@ -15,13 +15,14 @@ describe('Approved Dates API Routes', () => {
   const testStaffId = 130002;
 
   beforeEach(async () => {
-    await db.$connect();
+    await db.$connect(); // Start a transaction
 
     // Clean the tables before each test
     await db.withdraw_requests.deleteMany();
     await db.approved_dates.deleteMany();
     await db.requests.deleteMany();
     await db.users.deleteMany();
+    await db.role.deleteMany();
 
     // Insert required data into users and requests before creating approved_dates
     await db.users.create({
@@ -53,6 +54,7 @@ describe('Approved Dates API Routes', () => {
     await db.approved_dates.deleteMany();
     await db.requests.deleteMany();
     await db.users.deleteMany();
+    await db.role.deleteMany();
     await db.$disconnect();
   });
 
