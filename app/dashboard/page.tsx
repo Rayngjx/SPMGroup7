@@ -20,13 +20,13 @@ import { auth } from '@/auth';
 import authConfig from '@/auth.config';
 import { useEffect, useState } from 'react';
 import { NextResponse } from 'next/server';
+import CreateRequestForm from '@/components/forms/create-request/wfh-request';
 
 export default async function page() {
   const session = await auth();
-  console.log('Session: ', session); // Debug the session object
+  // console.log('Session: ', session); // Debug the session object
   // let getUsers;
   if (!session) {
-    console.log('No session found');
     return <p>Please log in to view this page.</p>;
   }
 
@@ -35,8 +35,7 @@ export default async function page() {
     try {
       const getUsers = await db.users.findMany({
         where: { staff_id: staffId }
-      });
-      console.log(getUsers); // Log retrieved users for debugging
+      }); // Log retrieved users for debugging
     } catch (error) {
       console.error(error);
     }
@@ -56,10 +55,11 @@ export default async function page() {
 
   let users = [];
   let error = null;
+  let requests = [];
 
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/all`,
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/`,
       {
         method: 'GET',
         headers: {
@@ -73,12 +73,33 @@ export default async function page() {
     }
 
     users = await response.json();
-    console.log(users);
+    // console.log(users);
   } catch (err: any) {
     error = err.message;
     console.error(error);
   }
 
+  try {
+    const testresponse = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/requests/`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!testresponse.ok) {
+      throw new Error('Failed to fetch requests');
+    }
+
+    requests = await testresponse.json();
+    console.log(requests);
+  } catch (err: any) {
+    error = err.message;
+    console.error(error);
+  }
   // let getUsers;
   // try {
   //   getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
@@ -107,7 +128,10 @@ export default async function page() {
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <CreateRequestForm />
+            </div>
+            {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -231,7 +255,7 @@ export default async function page() {
               <div className="col-span-4 md:col-span-3">
                 <PieGraph />
               </div>
-            </div>
+            </div> */}
           </TabsContent>
           <TabsContent value="analytics" className="space-y-4">
             <WFHCalendar />
