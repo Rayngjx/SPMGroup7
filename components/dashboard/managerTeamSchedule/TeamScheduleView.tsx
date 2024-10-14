@@ -1,99 +1,133 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Calendar as CalendarIcon } from 'lucide-react'
-import { format } from 'date-fns'
-import { Calendar } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover';
 
 interface TeamMember {
-  id: number
-  name: string
-  department: string
-  position: string
-  status: 'WFH' | 'Office'
+  id: number;
+  name: string;
+  department: string;
+  position: string;
+  status: 'WFH' | 'Office';
 }
 
 const ManagerTeamScheduleView: React.FC = () => {
-  const { data: session, status } = useSession()
-  const [date, setDate] = useState<Date>(new Date())
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
-  const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([])
-  const [nameFilter, setNameFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'wfh' | 'office'>('all')
+  const { data: session, status } = useSession();
+  const [date, setDate] = useState<Date>(new Date());
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
+  const [nameFilter, setNameFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'wfh' | 'office'>(
+    'all'
+  );
 
   useEffect(() => {
     if (session?.user?.id) {
-      fetchTeamMembers(session.user.id, date)
+      fetchTeamMembers(session.user.staff_id, date);
     }
-  }, [session, date])
+  }, [session, date]);
 
   useEffect(() => {
-    filterMembers()
-  }, [teamMembers, nameFilter, statusFilter])
+    filterMembers();
+  }, [teamMembers, nameFilter, statusFilter]);
 
-  const fetchTeamMembers = async (managerId: string, date: Date) => {
+  const fetchTeamMembers = async (managerId: number, date: Date) => {
     try {
-      const response = await fetch(`/api/manager-team-schedule?managerId=${managerId}&date=${format(date, 'yyyy-MM-dd')}`)
+      const response = await fetch(
+        `/api/team-members?managerId=${managerId}&date=${format(
+          date,
+          'yyyy-MM-dd'
+        )}`
+      );
       if (response.ok) {
-        const data = await response.json()
-        setTeamMembers(data)
+        const data = await response.json();
+        setTeamMembers(data);
       } else {
-        console.error('Failed to fetch team members')
+        console.error('Failed to fetch team members');
       }
     } catch (error) {
-      console.error('Error fetching team members:', error)
+      console.error('Error fetching team members:', error);
     }
-  }
+  };
 
   const filterMembers = () => {
-    let filtered = teamMembers
+    let filtered = teamMembers;
 
     if (nameFilter) {
-      filtered = filtered.filter(member => member.name.toLowerCase().includes(nameFilter.toLowerCase()))
+      filtered = filtered.filter((member) =>
+        member.name.toLowerCase().includes(nameFilter.toLowerCase())
+      );
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(member => 
-        (statusFilter === 'wfh' && member.status === 'WFH') || 
-        (statusFilter === 'office' && member.status === 'Office')
-      )
+      filtered = filtered.filter(
+        (member) =>
+          (statusFilter === 'wfh' && member.status === 'WFH') ||
+          (statusFilter === 'office' && member.status === 'Office')
+      );
     }
 
-    setFilteredMembers(filtered)
-  }
+    setFilteredMembers(filtered);
+  };
 
   const getAggregatedManpower = () => {
-    const wfhCount = filteredMembers.filter(member => member.status === 'WFH').length
-    const officeCount = filteredMembers.filter(member => member.status === 'Office').length
-    return { wfhCount, officeCount }
-  }
+    const wfhCount = filteredMembers.filter(
+      (member) => member.status === 'WFH'
+    ).length;
+    const officeCount = filteredMembers.filter(
+      (member) => member.status === 'Office'
+    ).length;
+    return { wfhCount, officeCount };
+  };
 
   if (status === 'loading') {
-    return <div>Loading...</div>
+    return <div>Loading...</div>;
   }
 
-  if (!session || session.user.role_id !== 3) {
-    return <div>You do not have permission to view this page.</div>
-  }
+  // if (!session || session.user.role_id !== 3) {
+  //   return <div>You do not have permission to view this page.</div>
+  // }
 
-  const { wfhCount, officeCount } = getAggregatedManpower()
+  const { wfhCount, officeCount } = getAggregatedManpower();
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex justify-between items-center">
+        <CardTitle className="flex items-center justify-between">
           <span>Team Schedule</span>
           <div className="flex items-center space-x-2">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                <Button
+                  variant="outline"
+                  className="w-[240px] justify-start text-left font-normal"
+                >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {date ? format(date, 'PPP') : <span>Pick a date</span>}
                 </Button>
@@ -111,14 +145,19 @@ const ManagerTeamScheduleView: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <Input
             placeholder="Filter by name"
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
             className="w-64"
           />
-          <Select value={statusFilter} onValueChange={(value: 'all' | 'wfh' | 'office') => setStatusFilter(value)}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value: 'all' | 'wfh' | 'office') =>
+              setStatusFilter(value)
+            }
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -130,7 +169,7 @@ const ManagerTeamScheduleView: React.FC = () => {
           </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle>Total Team Members</CardTitle>
@@ -179,8 +218,7 @@ const ManagerTeamScheduleView: React.FC = () => {
         </Table>
       </CardContent>
     </Card>
-  )
-}
+  );
+};
 
-export default ManagerTeamScheduleView
-
+export default ManagerTeamScheduleView;
