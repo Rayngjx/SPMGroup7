@@ -29,16 +29,16 @@ interface ScheduleEntry {
   status: 'Pending' | 'Approved' | 'Rejected' | 'Withdrawn';
 }
 
-interface WFHRequest {
+interface Request {
   id: number;
-  date: Date;
+  date: Date[];
   status: 'Pending' | 'Approved' | 'Rejected' | 'Withdrawn';
 }
 
 export default function PersonalSchedule() {
   const { data: session, status } = useSession();
   const [events, setEvents] = useState<ScheduleEntry[]>([]);
-  const [wfhRequests, setWfhRequests] = useState<WFHRequest[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filter, setFilter] = useState<
     'all' | 'Pending' | 'Approved' | 'Rejected' | 'Withdrawn'
@@ -46,9 +46,9 @@ export default function PersonalSchedule() {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.staff_id) {
-      const fetchWFHRequests = async (staffId: number) => {
+      const fetchRequests = async (staffId: number) => {
         try {
-          const response = await fetch(`/api/wfh-requests/${staffId}`);
+          const response = await fetch(`/api/requests/by-staff/${staffId}`);
           if (!response.ok) {
             throw new Error('Failed to fetch WFH requests');
           }
@@ -74,9 +74,9 @@ export default function PersonalSchedule() {
             }))
           ].filter((req) => isValid(req.date));
 
-          setWfhRequests(allRequests);
+          setRequests(allRequests);
 
-          const calendarEvents = allRequests.map((request: WFHRequest) => ({
+          const calendarEvents = allRequests.map((request: Request) => ({
             id: request.id,
             title: `WFH (${request.status})`,
             start: format(request.date, 'yyyy-MM-dd'),
@@ -90,11 +90,11 @@ export default function PersonalSchedule() {
         }
       };
 
-      fetchWFHRequests(session.user.staff_id);
+      fetchRequests(session.user.staff_id);
 
       // Simulate real-time updates with polling
       const pollInterval = setInterval(
-        () => fetchWFHRequests(session.user.staff_id),
+        () => fetchRequests(session.user.staff_id),
         30000
       );
       return () => clearInterval(pollInterval);
@@ -105,7 +105,7 @@ export default function PersonalSchedule() {
     setSelectedDate(arg.date);
   };
 
-  const filteredRequests = wfhRequests.filter(
+  const filteredRequests = requests.filter(
     (request) => filter === 'all' || request.status === filter
   );
 

@@ -19,10 +19,10 @@ export async function getRequests() {
 }
 
 // Get user requests
-export async function getUserRequests(payload: RequestsPayload) {
+export async function getUserRequests(staff_id: number) {
   const response = await db.requests.findMany({
     where: {
-      staff_id: payload.staff_id
+      staff_id: staff_id
     }
   });
   return response ? response : null;

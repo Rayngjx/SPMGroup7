@@ -79,27 +79,27 @@ export default async function page() {
     console.error(error);
   }
 
-  try {
-    const testresponse = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/requests/`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+  // try {
+  //   const testresponse = await fetch(
+  //     `${process.env.NEXT_PUBLIC_BASE_URL}/api/requests/`,
+  //     {
+  //       method: 'GET',
+  //       headers: {
+  //         'Content-Type': 'application/json'
+  //       }
+  //     }
+  //   );
 
-    if (!testresponse.ok) {
-      throw new Error('Failed to fetch requests');
-    }
+  //   if (!testresponse.ok) {
+  //     throw new Error('Failed to fetch requests');
+  //   }
 
-    requests = await testresponse.json();
-    console.log(requests);
-  } catch (err: any) {
-    error = err.message;
-    console.error(error);
-  }
+  //   requests = await testresponse.json();
+  //   console.log(requests);
+  // } catch (err: any) {
+  //   error = err.message;
+  //   console.error(error);
+  // }
   // let getUsers;
   // try {
   //   getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
