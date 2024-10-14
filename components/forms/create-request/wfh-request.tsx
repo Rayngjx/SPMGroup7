@@ -34,7 +34,7 @@ import { toast } from '@/components/ui/use-toast';
 
 type RequestFormData = {
   timeslot: string;
-  daterange: { from: Date; to: Date } | undefined;
+  dates: Date[];
   reason: string;
   document: File | undefined;
 };
@@ -46,7 +46,7 @@ export default function CreateRequestForm() {
   const form = useForm<RequestFormData>({
     defaultValues: {
       timeslot: '',
-      daterange: undefined,
+      dates: [],
       reason: '',
       document: undefined
     }
@@ -81,13 +81,17 @@ export default function CreateRequestForm() {
 
         const uploadData = await uploadResponse.json();
         documentUrl = uploadData.url;
+      } else {
+        documentUrl = null;
       }
 
       // 2. Submit the form data
       const formDataPayload = {
         staff_id: Number(session?.user?.staff_id),
         timeslot: data.timeslot,
-        daterange: JSON.stringify([data.daterange?.from, data.daterange?.to]),
+        dates: JSON.stringify(
+          data.dates.map((date) => format(date, 'yyyy-MM-dd'))
+        ),
         reason: data.reason,
         approved: 'Pending',
         document_url: documentUrl
@@ -160,10 +164,10 @@ export default function CreateRequestForm() {
         />
         <FormField
           control={form.control}
-          name="daterange"
+          name="dates"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>Date Range</FormLabel>
+              <FormLabel>Select Dates</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -171,21 +175,16 @@ export default function CreateRequestForm() {
                       variant={'outline'}
                       className={cn(
                         'w-[300px] justify-start text-left font-normal',
-                        !field.value && 'text-muted-foreground'
+                        !field.value.length && 'text-muted-foreground'
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value?.from ? (
-                        field.value.to ? (
-                          <>
-                            {format(field.value.from, 'LLL dd, y')} -{' '}
-                            {format(field.value.to, 'LLL dd, y')}
-                          </>
-                        ) : (
-                          format(field.value.from, 'LLL dd, y')
-                        )
+                      {field.value.length > 0 ? (
+                        field.value
+                          .map((date) => format(date, 'MMM d, yyyy'))
+                          .join(', ')
                       ) : (
-                        <span>Pick a date range</span>
+                        <span>Pick dates</span>
                       )}
                     </Button>
                   </FormControl>
@@ -193,8 +192,7 @@ export default function CreateRequestForm() {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     initialFocus
-                    mode="range"
-                    defaultMonth={field.value?.from}
+                    mode="multiple"
                     selected={field.value}
                     onSelect={field.onChange}
                     numberOfMonths={2}
@@ -202,7 +200,7 @@ export default function CreateRequestForm() {
                 </PopoverContent>
               </Popover>
               <FormDescription>
-                Select the date range for your WFH request.
+                Select the dates for your WFH request.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -237,7 +235,7 @@ export default function CreateRequestForm() {
               <FormControl>
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,.png,.jpg" // Limit the accepted file types if needed
+                  accept=".pdf,.doc,.docx,.png,.jpg"
                   onChange={(e) => field.onChange(e.target.files?.[0])}
                 />
               </FormControl>

@@ -38,11 +38,12 @@ export async function GET(
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
+    console.log('Received payload:', payload);
 
     if (
       !payload.staff_id ||
       !payload.timeslot ||
-      !payload.daterange ||
+      !payload.dates ||
       !payload.reason
     ) {
       return NextResponse.json(
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(result.request, { status: 201 });
     } else {
       console.error('Failed to create request:', result.error);
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      return NextResponse.json({ error: payload }, { status: 500 });
     }
   } catch (error) {
     console.error('Unexpected error in POST handler:', error);

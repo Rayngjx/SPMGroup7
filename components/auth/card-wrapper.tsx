@@ -17,7 +17,7 @@ type CardWrapperProps = React.HTMLAttributes<HTMLDivElement> & {
   headerDescription: string;
   backButtonLabel: string;
   backButtonHref: string;
-  showSocial?: boolean;
+  // showSocial?: boolean;
   heroImage?: string;
 };
 
