@@ -43,12 +43,14 @@ export const authConfig = {
         token.id = user.id;
         token.staff_id = user.staff_id; // Add staff_id to the JWT token
         token.staff_fname = user.staff_fname;
+        token.staff_lname = user.staff_lname;
         token.role_id = user.role_id;
+        token.reporting_manager = user.reporting_manager;
       }
       return token;
     },
     async session({ session, token }) {
-      console.log('Token in Session callback:', token); // Debug token
+      // console.log('Token in Session callback:', token); // Debug token
 
       // Ensure session.user exists and assign token values
       if (token) {
@@ -56,10 +58,12 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.staff_id = token.staff_id as number; // Assign staff_id from token to session.user
         session.user.staff_fname = token.staff_fname as string;
+        session.user.staff_lname = token.staff_lname as string;
         session.user.role_id = token.role_id as number;
+        session.user.reporting_manager = token.reporting_manager as number;
       }
 
-      console.log('Session after modification:', session); // Debug session after assignment
+      // console.log('Session after modification:', session); // Debug session after assignment
       return session;
     }
   },

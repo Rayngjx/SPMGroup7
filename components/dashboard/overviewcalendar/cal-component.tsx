@@ -42,7 +42,7 @@ import {
   deleteApproveDates,
   getApprovedDates,
   getApprovedDatesWithUserDetails
-} from '@/lib/crudFunctions/ApprovedDates';
+} from '@/app/api/crudFunctions/ApprovedDates';
 import { approved_dates } from '@prisma/client';
 import { SelectPortal } from '@radix-ui/react-select';
 
@@ -160,7 +160,7 @@ export default function WFHCalendar() {
 
         // Update state with the formatted data
         setApprovedDateswithDetails(formattedData); // update State, retreive data using approvedDateswithDetails
-        console.log(formattedData);
+        console.log(response);
       } catch (error) {
         console.error('Error:', error);
       } finally {

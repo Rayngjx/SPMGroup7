@@ -1,5 +1,6 @@
 'use server';
 import { db } from '@/lib/db';
+import { Truculenta } from 'next/font/google';
 
 interface ApprovedDatesPayload {
   staff_id: number;
@@ -116,13 +117,27 @@ export async function getApprovedDatesWithUserDetails() {
             position: true,
             email: true
           }
+        },
+        requests: {
+          select: {
+            request_id: true,
+            reason: true,
+            staff_id: true, // This will be the staff_id from the `requests` table.
+            users: {
+              // Fetching user details from the `requests` table related to `staff_id`.
+              select: {
+                staff_fname: true,
+                staff_lname: true
+              }
+            }
+          }
         }
       }
     });
+
     console.log(response);
+    console.log('here');
     return response;
-    console.log('approvedDates');
-    console.log('response detail', response);
   } catch (error) {
     console.error('Error fetching approved dates:', error);
   }

@@ -45,7 +45,7 @@ export function DashboardNav({
               <Tooltip key={index}>
                 <TooltipTrigger asChild>
                   <Link
-                    href={item.disabled ? '/' : item.href}
+                    href={item.disabled ? '/404' : item.href}
                     className={cn(
                       'flex items-center gap-2 overflow-hidden rounded-md py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground',
                       path === item.href ? 'bg-accent' : 'transparent',
