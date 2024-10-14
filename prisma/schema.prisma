@@ -23,7 +23,7 @@ model requests {
   request_id     Int              @id @default(autoincrement())
   staff_id       Int?
   timeslot       String?          @db.VarChar(20)
-  daterange      DateTime[]       @db.Date
+  dates          DateTime[]       @db.Timestamp
   reason         String?
   approved       String           @db.VarChar(20)
   document_url   String?          @db.VarChar(255)

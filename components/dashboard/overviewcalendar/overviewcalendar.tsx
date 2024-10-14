@@ -6,7 +6,6 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { db } from '@/lib/db';
 import {
   Popover,
   PopoverContent,
@@ -35,85 +34,69 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-import {
-  deleteApproveDates,
-  getApprovedDates,
-  getApprovedDatesWithUserDetails
-} from '@/lib/crudFunctions/ApprovedDates';
-import { approved_dates } from '@prisma/client';
-import { SelectPortal } from '@radix-ui/react-select';
+import { getApprovedDatesWithUserDetails } from '@/lib/crudFunctions/ApprovedDates';
+import { getAllUsers, getUser } from '@/lib/crudFunctions/Staff';
 
-type Department = 'Engineering' | 'Marketing' | 'Sales' | 'HR' | 'Finance';
-
-const departments: Department[] = [
-  'Engineering',
-  'Marketing',
-  'Sales',
-  'HR',
-  'Finance'
-];
-const departmentColors: Record<Department, string> = {
-  Engineering: 'bg-blue-600',
-  Marketing: 'bg-red-600',
-  Sales: 'bg-green-600',
-  HR: 'bg-yellow-600',
-  Finance: 'bg-purple-600'
+const departmentColors: Record<string, string> = {
+  'Human Resources': 'bg-blue-600',
+  Finance: 'bg-red-600',
+  Marketing: 'bg-green-600',
+  Sales: 'bg-yellow-600',
+  Engineering: 'bg-purple-600',
+  'Customer Support': 'bg-pink-600',
+  Operations: 'bg-indigo-600',
+  Legal: 'bg-orange-600'
 };
 
 interface Employee {
-  id: number;
-  name: string;
-  department: Department;
-  role: string;
-  reportingOfficer: string;
-  wfhDate: string;
+  staff_id: number;
+  request_id: number;
+  date: string;
+  staff_fname: string;
+  staff_lname: string;
+  department: string;
+  position: string;
   email: string;
-  phoneNumber: string;
-  address: string;
+  reason: string;
 }
-// Generate dummy data for testing, replace with async api call
-const dummyData: Employee[] = Array.from({ length: 500 }, (_, i) => ({
-  id: i + 1,
-  name: `Employee ${i + 1}`,
-  department: departments[Math.floor(Math.random() * departments.length)],
-  role: ['Manager', 'Team Lead', 'Senior', 'Junior', 'Intern'][
-    Math.floor(Math.random() * 5)
-  ],
-  reportingOfficer: `Manager ${Math.floor(i / 5) + 1}`,
-  wfhDate: format(
-    new Date(2024, 8, Math.floor(Math.random() * 30)),
-    'yyyy-MM-dd'
-  ),
-  email: `employee${i + 1}@company.com`,
-  phoneNumber: `+1 ${Math.floor(Math.random() * 1000)}-${Math.floor(
-    Math.random() * 1000
-  )}-${Math.floor(Math.random() * 10000)}`,
-  address: `${Math.floor(Math.random() * 1000)} Main St, City, State, 12345`
-}));
+
+interface AllUserDetails {
+  staff_id: number;
+  staff_fname: string;
+  staff_lname: string;
+  department: string;
+  email: string;
+  position: string;
+  role_id: number;
+  reporting_manager: number | null;
+  country: string;
+}
 
 const allColumns = [
   { key: 'name', label: 'Name' },
   { key: 'department', label: 'Department' },
-  { key: 'role', label: 'Role' },
-  { key: 'reportingOfficer', label: 'Reporting Officer' }
+  { key: 'position', label: 'Position' },
+  { key: 'reason', label: 'Reason' }
 ] as const;
 
 type ColumnKey = (typeof allColumns)[number]['key'];
 
 export default function WFHCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedDepartments, setSelectedDepartments] =
-    useState<Department[]>(departments);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [allDepartments, setAllDepartments] = useState<string[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [staffDetails, setStaffDetails] = useState<Employee[]>([]);
+  const [allUserDetails, setAllUserDetails] = useState<AllUserDetails[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState<{
     title: string;
     employees: Employee[];
-  }>({ title: '', employees: [] });
+    presentEmployees: AllUserDetails[];
+  }>({ title: '', employees: [], presentEmployees: [] });
   const [visibleColumns, setVisibleColumns] = useState<ColumnKey[]>(
     allColumns.map((col) => col.key)
   );
@@ -125,22 +108,40 @@ export default function WFHCalendar() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
     null
   );
+  const [error, setError] = useState<string | null>(null);
+  const [presentEmployees, setPresentEmployees] = useState<AllUserDetails[]>(
+    []
+  );
+  const [currentOfficePage, setCurrentOfficePage] = useState(1);
+  const [currentWfhPage, setCurrentWfhPage] = useState(1);
+  const [currentPresentPage, setCurrentPresentPage] = useState(1);
+  const employeesPerPage = 10;
 
-  const departmentCounts = useMemo(() => {
-    return departments.reduce(
-      (acc, dept) => {
-        acc[dept] = dummyData.filter(
-          (employee) => employee.department === dept
-        ).length;
-        return acc;
-      },
-      {} as Record<Department, number>
-    );
+  useEffect(() => {
+    const fetchAllUserDetails = async () => {
+      try {
+        const response = await getAllUsers();
+        if (!response) {
+          throw new Error('Error fetching users');
+        }
+
+        console.log('Raw response from getting all users:', response);
+        setAllUserDetails(response);
+
+        // Extract unique department names
+        const departments = [
+          ...new Set(response.map((user: AllUserDetails) => user.department))
+        ];
+        setAllDepartments(departments);
+        setSelectedDepartments(departments);
+      } catch (error) {
+        console.error('Error:', error);
+        setError('Failed to fetch user details. Please try again later.');
+      }
+    };
+
+    fetchAllUserDetails();
   }, []);
-  const [approvedDates, setApprovedDates] = useState<approved_dates[]>([]);
-  const [approvedDateswithDetails, setApprovedDateswithDetails] = useState<
-    approved_dates[]
-  >([]);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -149,114 +150,154 @@ export default function WFHCalendar() {
         if (!response) {
           throw new Error('Error fetching users');
         }
-        // const data = await response.json();
 
-        // Assuming response is in the format provided in the example
-        const formattedData = response.map((item: any) => ({
-          staff_id: item.staff_id,
-          request_id: item.request_id,
-          date: item.date // Formatting the date for display
-        }));
+        console.log(
+          'Raw response from getApprovedDatesWithUserDetails:',
+          response
+        );
 
-        // Update state with the formatted data
-        setApprovedDateswithDetails(formattedData); // update State, retreive data using approvedDateswithDetails
-        console.log(response);
+        const formattedData: Employee[] = response
+          .map((item: any) => {
+            let parsedDate;
+            try {
+              parsedDate = new Date(item.date);
+              if (!isValid(parsedDate)) {
+                throw new Error('Invalid date');
+              }
+            } catch (error) {
+              console.error('Error parsing date:', item.date, error);
+              return null;
+            }
+
+            return {
+              staff_id: item.staff_id,
+              request_id: item.request_id,
+              date: format(parsedDate, 'yyyy-MM-dd'),
+              staff_fname: item.users.staff_fname,
+              staff_lname: item.users.staff_lname,
+              department: item.users.department,
+              position: item.users.position,
+              email: item.users.email,
+              reason: item.requests.reason
+            };
+          })
+          .filter(Boolean);
+
+        console.log('Formatted data:', formattedData);
+
+        setStaffDetails(formattedData);
+        updateEvents(formattedData);
       } catch (error) {
         console.error('Error:', error);
-      } finally {
+        setError('Failed to fetch user details. Please try again later.');
       }
     };
 
     fetchDetails();
   }, []);
 
-  useEffect(() => {
-    const fetchDates = async () => {
-      try {
-        const response = await getApprovedDates();
-        // console.log(response);
-        if (!response) {
-          throw new Error('Error fetching users');
-        }
-        // const data = await response.json();
+  const updateEvents = (data: Employee[]) => {
+    console.log('Updating events with data:', data);
 
-        // Assuming response is in the format provided in the example
-        const formattedData = response.map((item: any) => ({
-          staff_id: item.staff_id,
-          request_id: item.request_id,
-          date: item.date // Formatting the date for display
-        }));
-
-        // Update state with the formatted data
-        setApprovedDates(formattedData);
-        // console.log(formattedData);
-      } catch (error) {
-        console.error('Error:', error);
-      } finally {
-      }
-    };
-
-    fetchDates();
-  }, []);
-
-  useEffect(() => {
-    const filteredData = dummyData.filter((employee) =>
+    const filteredData = data.filter((employee) =>
       selectedDepartments.includes(employee.department)
     );
-    const groupedEvents = filteredData.reduce<
-      Record<string, Partial<Record<Department, Employee[]>>>
-    >((acc, employee) => {
-      const dateStr = employee.wfhDate;
-      if (!acc[dateStr]) acc[dateStr] = {};
-      if (!acc[dateStr][employee.department]) {
-        acc[dateStr][employee.department] = [];
-      }
-      acc[dateStr][employee.department]?.push(employee);
-      return acc;
-    }, {});
+
+    console.log('Filtered data:', filteredData);
+
+    const groupedEvents = filteredData.reduce(
+      (acc, employee) => {
+        const dateStr = employee.date;
+        if (!acc[dateStr]) acc[dateStr] = {};
+        if (!acc[dateStr][employee.department])
+          acc[dateStr][employee.department] = [];
+        acc[dateStr][employee.department].push(employee);
+        return acc;
+      },
+      {} as Record<string, Partial<Record<string, Employee[]>>>
+    );
+
+    console.log('Grouped events:', groupedEvents);
 
     const formattedEvents = Object.entries(groupedEvents).flatMap(
       ([date, departments]) =>
         Object.entries(departments).map(([department, employees]) => ({
-          title: `${department} : ${employees!.length}`,
+          title: `${department}: ${employees!.length}`,
           start: date,
-          end: date,
           allDay: true,
           extendedProps: { department, employees }
         }))
     );
 
-    setEvents(formattedEvents);
-    updateStaffDetails(selectedDate, filteredData);
-  }, [selectedDepartments, selectedDate]);
+    console.log('Formatted events:', formattedEvents);
 
-  const updateStaffDetails = (date: Date, filteredData: Employee[]) => {
-    setStaffDetails(
-      filteredData.filter(
-        (employee) => employee.wfhDate === format(date, 'yyyy-MM-dd')
-      )
-    );
-    setCurrentPage(1);
+    setEvents(formattedEvents);
   };
 
-  const toggleDepartment = (department: Department) => {
+  useEffect(() => {
+    updateEvents(staffDetails);
+  }, [staffDetails, selectedDepartments]);
+
+  const updateStaffDetails = (date: Date) => {
+    const filteredData = staffDetails.filter(
+      (employee) =>
+        employee.date === format(date, 'yyyy-MM-dd') &&
+        selectedDepartments.includes(employee.department)
+    );
+    setCurrentPage(1);
+    return filteredData;
+  };
+
+  const getPresentEmployees = (date: Date, department: string) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const wfhEmployees = new Set(
+      staffDetails
+        .filter(
+          (employee) =>
+            employee.date === dateStr && employee.department === department
+        )
+        .map((employee) => employee.staff_id)
+    );
+
+    return allUserDetails.filter(
+      (employee) =>
+        !wfhEmployees.has(employee.staff_id) &&
+        employee.department === department
+    );
+  };
+
+  useEffect(() => {
+    const filteredData = updateStaffDetails(selectedDate);
+    const presentData = getPresentEmployees(
+      selectedDate,
+      selectedDepartments[0] || ''
+    );
+    setPresentEmployees(presentData);
+  }, [selectedDate, staffDetails, selectedDepartments, allUserDetails]);
+
+  const toggleDepartment = (dept: string) => {
     setSelectedDepartments((prev) =>
-      prev.includes(department)
-        ? prev.filter((d) => d !== department)
-        : [...prev, department]
+      prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]
     );
   };
 
   const handleEventClick = (info: any) => {
     const { department, employees } = info.event.extendedProps;
+    const presentEmployees = getPresentEmployees(
+      new Date(info.event.start),
+      department
+    );
     setDialogContent({
       title: `${department} - ${format(
         new Date(info.event.start),
         'MMMM d, yyyy'
       )}`,
-      employees
+      employees,
+      presentEmployees
     });
     setIsDialogOpen(true);
+    setCurrentWfhPage(1);
+    setCurrentPresentPage(1);
   };
 
   const toggleColumn = (columnKey: ColumnKey) => {
@@ -279,9 +320,9 @@ export default function WFHCalendar() {
     setSortConfig({ key, direction });
   };
 
-  const getSortedData = () => {
-    if (!sortConfig) return staffDetails;
-    return [...staffDetails].sort((a, b) => {
+  const getSortedData = (data: Employee[]) => {
+    if (!sortConfig) return data;
+    return [...data].sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
         return sortConfig.direction === 'ascending' ? -1 : 1;
       }
@@ -292,17 +333,42 @@ export default function WFHCalendar() {
     });
   };
 
-  const sortedData = getSortedData();
+  const filteredData = useMemo(
+    () => updateStaffDetails(selectedDate),
+    [selectedDate, staffDetails, selectedDepartments]
+  );
+  const sortedData = useMemo(
+    () => getSortedData(filteredData),
+    [filteredData, sortConfig]
+  );
   const totalPages = Math.ceil(sortedData.length / 10);
   const paginatedData = sortedData.slice(
     (currentPage - 1) * 10,
     currentPage * 10
   );
 
-  const totalWFH = staffDetails.length;
-  const totalInOffice =
-    selectedDepartments.reduce((sum, dept) => sum + departmentCounts[dept], 0) -
-    totalWFH;
+  const departmentCounts = useMemo(() => {
+    return allDepartments.reduce(
+      (acc, dept) => {
+        acc[dept] = allUserDetails.filter(
+          (employee) => employee.department === dept
+        ).length;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+  }, [allUserDetails, allDepartments]);
+
+  const totalWFH = filteredData.length;
+  const totalEmployees = selectedDepartments.reduce(
+    (sum, dept) => sum + (departmentCounts[dept] || 0),
+    0
+  );
+  const totalInOffice = totalEmployees - totalWFH;
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
 
   return (
     <div className="">
@@ -321,7 +387,7 @@ export default function WFHCalendar() {
                 </PopoverTrigger>
                 <PopoverContent className="w-56" align="end">
                   <div className="space-y-2">
-                    {departments.map((dept) => (
+                    {allDepartments.map((dept) => (
                       <div key={dept} className="flex items-center space-x-2">
                         <Checkbox
                           id={`dept-${dept}`}
@@ -357,8 +423,8 @@ export default function WFHCalendar() {
                     <div
                       className={`h-2 w-2 rounded-full ${
                         departmentColors[
-                          eventInfo.event.extendedProps.department as Department
-                        ]
+                          eventInfo.event.extendedProps.department
+                        ] || 'bg-gray-400'
                       }`}
                     ></div>
                     <span className="text-xs text-foreground">
@@ -403,11 +469,11 @@ export default function WFHCalendar() {
                 <span className="text-sm font-medium">{totalInOffice}</span>
               </div>
               <div className="my-4 h-px bg-border"></div>
-              {departments.map((dept) => {
-                const wfhCount = staffDetails.filter(
+              {allDepartments.map((dept) => {
+                const wfhCount = filteredData.filter(
                   (staff) => staff.department === dept
                 ).length;
-                const totalInDepartment = departmentCounts[dept];
+                const totalInDepartment = departmentCounts[dept] || 0;
                 return (
                   <div key={dept} className="flex items-center justify-between">
                     <span className="text-sm font-medium">{dept}</span>
@@ -417,9 +483,13 @@ export default function WFHCalendar() {
                       </span>
                       <div className="h-1.5 w-24 rounded-full bg-secondary">
                         <div
-                          className={`h-1.5 rounded-full ${departmentColors[dept]}`}
+                          className={`h-1.5 rounded-full ${
+                            departmentColors[dept] || 'bg-gray-400'
+                          }`}
                           style={{
-                            width: `${(wfhCount / totalInDepartment) * 100}%`
+                            width: `${
+                              (wfhCount / (totalInDepartment || 1)) * 100
+                            }%`
                           }}
                         ></div>
                       </div>
@@ -495,26 +565,17 @@ export default function WFHCalendar() {
             <TableBody>
               {paginatedData.map((staff) => (
                 <TableRow
-                  key={staff.id}
+                  key={staff.staff_id}
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => setSelectedEmployee(staff)}
                 >
                   {allColumns
                     .filter((col) => visibleColumns.includes(col.key))
                     .map((column) => (
-                      <TableCell key={`${staff.id}-${column.key}`}>
-                        {column.key === 'department' ? (
-                          <div className="flex items-center space-x-2">
-                            <div
-                              className={`h-2 w-2 rounded-full ${
-                                departmentColors[staff.department]
-                              }`}
-                            ></div>
-                            <span>{staff.department}</span>
-                          </div>
-                        ) : (
-                          staff[column.key]
-                        )}
+                      <TableCell key={`${staff.staff_id}-${column.key}`}>
+                        {column.key === 'name'
+                          ? `${staff.staff_fname} ${staff.staff_lname}`
+                          : staff[column.key]}
                       </TableCell>
                     ))}
                 </TableRow>
@@ -549,30 +610,147 @@ export default function WFHCalendar() {
         </CardContent>
       </Card>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{dialogContent.title}</DialogTitle>
-            <DialogDescription>Employees working from home:</DialogDescription>
+            <DialogDescription>Department Overview</DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Reporting Officer</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dialogContent.employees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell>{employee.name}</TableCell>
-                    <TableCell>{employee.role}</TableCell>
-                    <TableCell>{employee.reportingOfficer}</TableCell>
+          <div className="mt-4 space-y-6">
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">
+                Employees Working From Home
+              </h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Reason</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {dialogContent.employees
+                    .slice(
+                      (currentWfhPage - 1) * employeesPerPage,
+                      currentWfhPage * employeesPerPage
+                    )
+                    .map((employee) => (
+                      <TableRow key={employee.staff_id}>
+                        <TableCell>{`${employee.staff_fname} ${employee.staff_lname}`}</TableCell>
+                        <TableCell>{employee.position}</TableCell>
+                        <TableCell>{employee.reason}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify-between space-x-2 py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentWfhPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentWfhPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentWfhPage} of{' '}
+                  {Math.ceil(dialogContent.employees.length / employeesPerPage)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentWfhPage((prev) =>
+                      Math.min(
+                        prev + 1,
+                        Math.ceil(
+                          dialogContent.employees.length / employeesPerPage
+                        )
+                      )
+                    )
+                  }
+                  disabled={
+                    currentWfhPage ===
+                    Math.ceil(dialogContent.employees.length / employeesPerPage)
+                  }
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">
+                Employees Present in Office
+              </h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Position</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dialogContent.presentEmployees
+                    .slice(
+                      (currentPresentPage - 1) * employeesPerPage,
+                      currentPresentPage * employeesPerPage
+                    )
+                    .map((employee) => (
+                      <TableRow key={employee.staff_id}>
+                        <TableCell>{`${employee.staff_fname} ${employee.staff_lname}`}</TableCell>
+                        <TableCell>{employee.position}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify-between space-x-2 py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPresentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPresentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPresentPage} of{' '}
+                  {Math.ceil(
+                    dialogContent.presentEmployees.length / employeesPerPage
+                  )}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPresentPage((prev) =>
+                      Math.min(
+                        prev + 1,
+                        Math.ceil(
+                          dialogContent.presentEmployees.length /
+                            employeesPerPage
+                        )
+                      )
+                    )
+                  }
+                  disabled={
+                    currentPresentPage ===
+                    Math.ceil(
+                      dialogContent.presentEmployees.length / employeesPerPage
+                    )
+                  }
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -588,35 +766,27 @@ export default function WFHCalendar() {
             <div className="mt-4 space-y-4">
               <div>
                 <h3 className="text-sm font-medium">Name</h3>
-                <p>{selectedEmployee.name}</p>
+                <p>{`${selectedEmployee.staff_fname} ${selectedEmployee.staff_lname}`}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium">Department</h3>
                 <p>{selectedEmployee.department}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium">Role</h3>
-                <p>{selectedEmployee.role}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium">Reporting Officer</h3>
-                <p>{selectedEmployee.reportingOfficer}</p>
+                <h3 className="text-sm font-medium">Position</h3>
+                <p>{selectedEmployee.position}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium">Email</h3>
                 <p>{selectedEmployee.email}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium">Phone Number</h3>
-                <p>{selectedEmployee.phoneNumber}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium">Address</h3>
-                <p>{selectedEmployee.address}</p>
+                <h3 className="text-sm font-medium">Reason</h3>
+                <p>{selectedEmployee.reason}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium">WFH Date</h3>
-                <p>{selectedEmployee.wfhDate}</p>
+                <p>{selectedEmployee.date}</p>
               </div>
             </div>
           )}

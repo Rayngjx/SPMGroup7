@@ -1,5 +1,6 @@
 'use server';
 import { db } from '@/lib/db';
+import { Truculenta } from 'next/font/google';
 
 interface ApprovedDatesPayload {
   staff_id: number;
@@ -41,10 +42,10 @@ export async function getTeamApprovedDates(teamleadId: number) {
 }
 
 // Get approved dates of department
-export async function getDpmtApprovedDates(deptId: number) {
+export async function getDpmtApprovedDates(department: String) {
   // Find all users with dept_id equal to deptId
   const departmentMembers = await db.users.findMany({
-    where: { dept_id: deptId },
+    where: { department: department.toString() },
     select: { staff_id: true }
   });
 
@@ -112,17 +113,31 @@ export async function getApprovedDatesWithUserDetails() {
           select: {
             staff_fname: true,
             staff_lname: true,
-            dept_id: true,
+            department: true,
             position: true,
             email: true
+          }
+        },
+        requests: {
+          select: {
+            request_id: true,
+            reason: true,
+            staff_id: true, // This will be the staff_id from the `requests` table.
+            users: {
+              // Fetching user details from the `requests` table related to `staff_id`.
+              select: {
+                staff_fname: true,
+                staff_lname: true
+              }
+            }
           }
         }
       }
     });
+
     console.log(response);
+    console.log('here');
     return response;
-    console.log('approvedDates');
-    console.log('response detail', response);
   } catch (error) {
     console.error('Error fetching approved dates:', error);
   }

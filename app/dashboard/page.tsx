@@ -73,7 +73,7 @@ export default async function page() {
 
     users = await response.json();
     console.log(users);
-  } catch (err) {
+  } catch (err: any) {
     error = err.message;
     console.error(error);
   }

@@ -6,17 +6,18 @@ interface UpdateUserPayload {
   staff_id: number;
   staff_fname: string;
   staff_lname: string;
-  dept_id?: number;
+  department: string;
   position?: string;
   country: string;
   email?: string;
   reporting_manager?: number;
-  role_id?: number;
+  role_id: number;
+  temp_replacement?: number;
 }
 
 // Function to get a specific user by staff_id
 export async function getUser({ staff_id }: { staff_id: number }) {
-  const response = await db.users.findMany({
+  const response = await db.users.findUnique({
     where: { staff_id }
   });
   return response ? response : null;
@@ -32,14 +33,15 @@ export async function getAllUsers() {
 export async function createUser(payload: UpdateUserPayload) {
   const cleanedPayload = {
     ...payload,
-    staff_fname: payload.staff_fname ?? null,
-    staff_lname: payload.staff_lname ?? null,
-    dept_id: payload.dept_id ?? null,
-    position: payload.position ?? null,
-    country: payload.country ?? null,
+    staff_fname: payload.staff_fname,
+    staff_lname: payload.staff_lname,
+    department: payload.department,
+    position: payload.position || '',
+    country: payload.country,
     email: payload.email ?? null,
     reporting_manager: payload.reporting_manager ?? null,
-    role_id: payload.role_id ?? null
+    role_id: payload.role_id,
+    temp_replacement: payload.temp_replacement ?? null
   };
 
   const response = await db.users.create({
@@ -57,12 +59,13 @@ export async function updateUser(payload: UpdateUserPayload) {
     data: {
       staff_fname: payload.staff_fname,
       staff_lname: payload.staff_lname,
-      dept_id: payload.dept_id,
+      department: payload.department,
       position: payload.position,
       country: payload.country,
       email: payload.email,
       reporting_manager: payload.reporting_manager,
-      role_id: payload.role_id
+      role_id: payload.role_id,
+      temp_replacement: payload.temp_replacement
     }
   });
   return response ? { success: true } : { success: false, error: 'Failed!' };
