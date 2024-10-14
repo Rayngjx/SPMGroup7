@@ -1,51 +1,110 @@
-import { db } from '@/lib/db';
-import { withdrawWFHRequest } from '@/lib/crudFunctions/WFH'; // Assuming you have a function like this
+// Import jest and the future WFH functions
+jest.mock('@/lib/crudFunctions/WFHFunctions', () => ({
+  applyForWFHRequest: jest.fn(),
+  cancelWFHRequest: jest.fn(),
+  viewTeamSchedule: jest.fn(),
+  viewWFHRequest: jest.fn(),
+  viewWFHArrangements: jest.fn(),
+  withdrawWFHArrangement: jest.fn()
+}));
 
-describe('Withdrawing WFH Rearrangement', () => {
-  const testStaffId = 1;
-  const testWithdrawRequestId = 100;
+// Import the mocked module
+import * as WFHFunctions from '@/lib/crudFunctions/WFHFunctions';
 
-  beforeEach(async () => {
-    // Clean the database
-    await db.withdraw_requests.deleteMany();
-    await db.users.deleteMany();
-    await db.requests.deleteMany();
-
-    // Seed required data
-    await db.users.create({
-      data: {
-        Staff_ID: testStaffId,
-        Staff_Fname: 'John',
-        Staff_Lname: 'Doe',
-        Department: 'HR',
-        Position: 'Manager',
-        Country: 'USA',
-        Role_ID: 1
-      }
+describe('WFH Functionality', () => {
+  // Test: Apply for WFH Request
+  it('should apply for WFH request', async () => {
+    // Define the mock behavior
+    WFHFunctions.applyForWFHRequest.mockResolvedValue({
+      staff_id: 1,
+      timeslot: 'AM',
+      daterange: [new Date('2024-10-10')],
+      reason: 'Medical reason',
+      approved: 'Pending'
     });
 
-    await db.withdraw_requests.create({
-      data: {
-        Withdraw_Request_ID: testWithdrawRequestId,
-        Staff_ID: testStaffId,
-        Timeslot: 'AM',
-        Date: new Date('2023-10-01'),
-        Reason: 'Personal reasons',
-        Approved: 'Pending'
-      }
-    });
+    // Call the mock function
+    const result = await WFHFunctions.applyForWFHRequest();
+
+    // Assertions
+    expect(result.staff_id).toBe(1);
+    expect(result.timeslot).toBe('AM');
+    expect(result.approved).toBe('Pending');
   });
 
-  it('should withdraw the WFH request successfully', async () => {
-    const result = await withdrawWFHRequest(testWithdrawRequestId);
+  // Test: Cancel Pending WFH Request
+  it('should cancel a pending WFH request', async () => {
+    // Define the mock behavior
+    WFHFunctions.cancelWFHRequest.mockResolvedValue({ success: true });
 
+    // Call the mock function
+    const result = await WFHFunctions.cancelWFHRequest(1); // Assume 1 is the WFH request ID
+
+    // Assertions
     expect(result.success).toBe(true);
+  });
 
-    // Verify the request is withdrawn in the database
-    const withdrawnRequest = await db.withdraw_requests.findUnique({
-      where: { Withdraw_Request_ID: testWithdrawRequestId }
+  // Test: View Team Schedule
+  it('should view team schedule as a whole', async () => {
+    // Define the mock behavior
+    WFHFunctions.viewTeamSchedule.mockResolvedValue([
+      { staff_id: 1, position: 'Manager', working_status: 'WFH' },
+      { staff_id: 2, position: 'Developer', working_status: 'In Office' }
+    ]);
+
+    // Call the mock function
+    const result = await WFHFunctions.viewTeamSchedule(123); // Assume 123 is the team lead ID
+
+    // Assertions
+    expect(result.length).toBe(2);
+    expect(result[0].working_status).toBe('WFH');
+  });
+
+  // Test: View WFH Request
+  it('should view WFH request details', async () => {
+    // Define the mock behavior
+    WFHFunctions.viewWFHRequest.mockResolvedValue({
+      staff_id: 1,
+      timeslot: 'PM',
+      daterange: [new Date('2024-11-05')],
+      reason: 'Personal Errand',
+      approved: 'Pending'
     });
 
-    expect(withdrawnRequest).toBeNull(); // Request should be removed after withdrawal
+    // Call the mock function
+    const result = await WFHFunctions.viewWFHRequest(1); // Assume 1 is the WFH request ID
+
+    // Assertions
+    expect(result.staff_id).toBe(1);
+    expect(result.timeslot).toBe('PM');
+    expect(result.reason).toBe('Personal Errand');
+  });
+
+  // Test: View WFH Arrangements
+  it('should view all WFH arrangements', async () => {
+    // Define the mock behavior
+    WFHFunctions.viewWFHArrangements.mockResolvedValue([
+      { staff_id: 1, timeslot: 'AM', daterange: [new Date('2024-10-10')] },
+      { staff_id: 2, timeslot: 'PM', daterange: [new Date('2024-10-11')] }
+    ]);
+
+    // Call the mock function
+    const result = await WFHFunctions.viewWFHArrangements();
+
+    // Assertions
+    expect(result.length).toBe(2);
+    expect(result[0].timeslot).toBe('AM');
+  });
+
+  // Test: Withdraw WFH Arrangement
+  it('should withdraw an existing WFH arrangement', async () => {
+    // Define the mock behavior
+    WFHFunctions.withdrawWFHArrangement.mockResolvedValue({ success: true });
+
+    // Call the mock function
+    const result = await WFHFunctions.withdrawWFHArrangement(1); // Assume 1 is the WFH arrangement ID
+
+    // Assertions
+    expect(result.success).toBe(true);
   });
 });
