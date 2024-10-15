@@ -51,5 +51,10 @@ export async function POST(req: Request) {
 
 // Handle OPTIONS request
 export async function OPTIONS() {
-  return NextResponse.json({ allow: ['GET', 'POST'] }, { status: 200 });
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      Allow: 'GET, PUT, DELETE'
+    }
+  });
 }
