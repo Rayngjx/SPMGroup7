@@ -1,0 +1,20 @@
+@import '@fullcalendar/common/main.css';
+@import '@fullcalendar/daygrid/main.css';
+
+.fc .fc-daygrid-day-frame {
+  height: 100%;
+}
+
+.fc .fc-daygrid-day-top {
+  flex-direction: row;
+}
+
+.fc .fc-daygrid-day-number {
+  width: 100%;
+  text-align: left;
+}
+
+.fc .fc-day-sat,
+.fc .fc-day-sun {
+  background-color: #f3f4f6;
+}

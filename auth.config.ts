@@ -39,7 +39,7 @@ export const authConfig = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        console.log('User in JWT callback:', user); // Debug user in JWT
+        // console.log('User in JWT callback:', user); // Debug user in JWT
         token.id = user.id;
         token.staff_id = user.staff_id; // Add staff_id to the JWT token
         token.staff_fname = user.staff_fname;

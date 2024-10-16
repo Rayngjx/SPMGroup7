@@ -8,6 +8,30 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model delegation_requests {
+  delegation_request                            Int        @id @default(autoincrement())
+  staff_id                                      Int?
+  delegated_to                                  Int?
+  status                                        String?    @db.VarChar(20)
+  date_range                                    DateTime[] @db.Date
+  created_at                                    DateTime?  @default(now()) @db.Timestamptz(6)
+  users_delegation_requests_delegated_toTousers users?     @relation("delegation_requests_delegated_toTousers", fields: [delegated_to], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users_delegation_requests_staff_idTousers     users?     @relation("delegation_requests_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model logs {
+  log_id                         Int      @id @default(autoincrement())
+  staff_id                       Int?
+  request_id                     Int
+  processor_id                   Int?
+  reason                         String?
+  action                         String   @db.VarChar(20)
+  created_at                     DateTime @db.Date
+  users_logs_processor_idTousers users?   @relation("logs_processor_idTousers", fields: [processor_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users_logs_staff_idTousers     users?   @relation("logs_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model requests {
   request_id       Int       @id @default(autoincrement())
@@ -45,32 +69,7 @@ model users {
   logs_logs_processor_idTousers                               logs[]                @relation("logs_processor_idTousers")
   logs_logs_staff_idTousers                                   logs[]                @relation("logs_staff_idTousers")
   requests                                                    requests[]
-  users                                                       users?                @relation("usersTousers", fields: [reporting_manager], references: [staff_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_manager")
+  users                                                       users?                @relation("usersTousers", fields: [reporting_manager], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
   other_users                                                 users[]               @relation("usersTousers")
   role                                                        role                  @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model logs {
-  log_id                         Int      @id @default(autoincrement())
-  staff_id                       Int?
-  request_id                     Int
-  processor_id                   Int?
-  reason                         String?
-  action                         String   @db.VarChar(20)
-  created_at                     DateTime @db.Date
-  users_logs_processor_idTousers users?   @relation("logs_processor_idTousers", fields: [processor_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  users_logs_staff_idTousers     users?   @relation("logs_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model delegation_requests {
-  delegation_request                            Int        @id @default(autoincrement())
-  staff_id                                      Int?
-  delegated_to                                  Int?
-  status                                        String?    @db.VarChar(20)
-  date_range                                    DateTime[] @db.Date
-  created_at                                    DateTime?  @default(now()) @db.Timestamptz(6)
-  users_delegation_requests_delegated_toTousers users?     @relation("delegation_requests_delegated_toTousers", fields: [delegated_to], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  users_delegation_requests_staff_idTousers     users?     @relation("delegation_requests_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
 }

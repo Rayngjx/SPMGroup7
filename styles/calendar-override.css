@@ -1,0 +1,27 @@
+.fc-daygrid-day {
+  position: relative;
+}
+
+.fc-daygrid-day-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.fc-daygrid-day-events {
+  display: none;
+}
+
+.fc-daygrid-day-top {
+  z-index: 2;
+}
+
+.fc-day-today {
+  background-color: inherit !important;
+}
+
+.fc-day-today .fc-daygrid-day-top {
+  background-color: rgba(0, 0, 0, 0.1);
+}

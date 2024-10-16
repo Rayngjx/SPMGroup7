@@ -78,3 +78,25 @@
     height: 100dvh;
   }
 }
+
+:root {
+  --blue-600: #2563eb;
+  --orange-300: #fdba74;
+  --gray-400: #9ca3af;
+  --blue-300: #93c5fd;
+}
+.fc-day-wfh {
+  background-color: #2563eb !important;
+} /* blue-600 */
+.fc-day-pending {
+  background-color: #fcd34d !important;
+} /* orange-300 */
+.fc-day-withdrawn {
+  background-color: #9ca3af !important;
+} /* gray-400 */
+.fc-day-withdraw-requested {
+  background-color: #93c5fd !important;
+} /* blue-300 */
+.fc-day-weekend {
+  background-color: #f3f4f6 !important;
+}

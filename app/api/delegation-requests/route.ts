@@ -5,28 +5,21 @@ const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const department = searchParams.get('department');
-  const reportingManager = searchParams.get('reportingManager');
+  const staffId = searchParams.get('staffId');
 
-  let users;
+  const delegationRequests = await prisma.delegation_requests.findMany({
+    where: staffId ? { staff_id: parseInt(staffId) } : {}
+  });
 
-  if (department) {
-    users = await prisma.users.findMany({ where: { department } });
-  } else if (reportingManager) {
-    users = await prisma.users.findMany({
-      where: { reporting_manager: parseInt(reportingManager) }
-    });
-  } else {
-    users = await prisma.users.findMany();
-  }
-
-  return NextResponse.json(users);
+  return NextResponse.json(delegationRequests);
 }
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const newUser = await prisma.users.create({ data: body });
-  return NextResponse.json(newUser);
+  const newDelegationRequest = await prisma.delegation_requests.create({
+    data: body
+  });
+  return NextResponse.json(newDelegationRequest);
 }
 
 export async function OPTIONS() {
