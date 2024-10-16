@@ -10,9 +10,8 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { useSession } from 'next-auth/react';
-import { Request, WithdrawRequest } from '@/types/db-types';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 
 interface UnifiedRequest {
   id: number;
@@ -27,62 +26,61 @@ export default function RequestList() {
   const { data: session, status } = useSession();
   const [pendingRequests, setPendingRequests] = useState<UnifiedRequest[]>([]);
   const [filter, setFilter] = useState<'All' | 'WFH' | 'Withdraw'>('All');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.staff_id) {
-      const fetchRequests = async (staffId: number) => {
-        try {
-          const [wfhResponse, withdrawResponse] = await Promise.all([
-            fetch(`/api/requests/by-staff/${staffId}`),
-            fetch(`/api/withdrawRequests/by-staff/${staffId}`)
-          ]);
-
-          if (!wfhResponse.ok || !withdrawResponse.ok) {
-            throw new Error('Failed to fetch requests');
-          }
-
-          const wfhData: Request[] = await wfhResponse.json();
-          const withdrawData: WithdrawRequest[] = await withdrawResponse.json();
-
-          const pendingWfh: UnifiedRequest[] = wfhData
-            .filter((req) => req.approved === 'Pending')
-            .map((req) => ({
-              id: req.request_id,
-              type: 'WFH',
-              dates: req.dates,
-              reason: req.reason,
-              timeslot: req.timeslot,
-              approved: req.approved
-            }));
-
-          const pendingWithdraw: UnifiedRequest[] = withdrawData
-            .filter((req) => req.approved === 'Pending')
-            .map((req) => ({
-              id: req.withdraw_request_id,
-              type: 'Withdraw',
-              dates: req.date,
-              reason: req.reason,
-              timeslot: req.timeslot,
-              approved: req.approved
-            }));
-          console.log(pendingWfh, 'wfh');
-          console.log(pendingWithdraw, 'wirhdraw');
-          setPendingRequests([...pendingWfh, ...pendingWithdraw]);
-          console.log(pendingRequests);
-        } catch (error) {
-          console.error('Error fetching requests:', error);
-        }
-      };
-
       fetchRequests(session.user.staff_id);
-
-      const pollInterval = setInterval(
-        () => fetchRequests(session.user.staff_id),
-        30000
-      );
-      return () => clearInterval(pollInterval);
     }
   }, [session, status]);
+
+  const fetchRequests = async (staffId: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [wfhResponse, withdrawResponse] = await Promise.all([
+        fetch(`/api/requests/by-staff/${staffId}`),
+        fetch(`/api/withdrawRequests/by-staff/${staffId}`)
+      ]);
+
+      if (!wfhResponse.ok || !withdrawResponse.ok) {
+        throw new Error('Failed to fetch requests');
+      }
+
+      const wfhData = await wfhResponse.json();
+      const withdrawData = await withdrawResponse.json();
+
+      const pendingWfh: UnifiedRequest[] = wfhData
+        .filter((req: any) => req.approved === 'Pending')
+        .map((req: any) => ({
+          id: req.request_id,
+          type: 'WFH',
+          dates: req.dates.map((date: string) => new Date(date)),
+          reason: req.reason,
+          timeslot: req.timeslot,
+          approved: req.approved
+        }));
+
+      const pendingWithdraw: UnifiedRequest[] = withdrawData
+        .filter((req: any) => req.approved === 'Pending')
+        .map((req: any) => ({
+          id: req.withdraw_request_id,
+          type: 'Withdraw',
+          dates: new Date(req.date),
+          reason: req.reason,
+          timeslot: req.timeslot,
+          approved: req.approved
+        }));
+
+      setPendingRequests([...pendingWfh, ...pendingWithdraw]);
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+      setError('Failed to load requests. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredRequests = pendingRequests.filter(
     (req) => filter === 'All' || req.type === filter
@@ -98,7 +96,7 @@ export default function RequestList() {
             setFilter(value)
           }
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter requests" />
           </SelectTrigger>
           <SelectContent>
@@ -109,34 +107,56 @@ export default function RequestList() {
         </Select>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[600px]">
-          {filteredRequests.map((request) => (
-            <RequestItem
-              key={`${request.type}-${request.id}`}
-              request={request}
-            />
-          ))}
-        </ScrollArea>
+        {isLoading && <p>Loading requests...</p>}
+        {error && <p className="text-red-500">{error}</p>}
+        {!isLoading && !error && (
+          <ScrollArea className="h-[400px] pr-4">
+            {filteredRequests.map((request) => (
+              <RequestItem
+                key={`${request.type}-${request.id}`}
+                request={request}
+              />
+            ))}
+          </ScrollArea>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 function RequestItem({ request }: { request: UnifiedRequest }) {
+  const getBgColor = (type: 'WFH' | 'Withdraw') => {
+    return type === 'WFH' ? 'bg-orange-100' : 'bg-gray-100';
+  };
+
+  const getTextColor = (type: 'WFH' | 'Withdraw') => {
+    return type === 'WFH' ? 'text-orange-800' : 'text-gray-800';
+  };
+
+  const formatDate = (date: Date) => {
+    return format(date, 'd MMM');
+  };
+
   return (
-    <div className="mb-4 rounded border p-4">
-      <h3 className="font-bold">{request.type} Request</h3>
-      <p>
+    <div className={`mb-4 rounded-lg p-4 ${getBgColor(request.type)}`}>
+      <h3 className={`font-bold ${getTextColor(request.type)}`}>
+        {request.type} Request
+      </h3>
+      <p className="text-sm text-gray-600">
         Date(s):{' '}
         {Array.isArray(request.dates)
-          ? request.dates
-              .map((d) => format(parseISO(d), 'MMM d, yyyy'))
-              .join(', ')
-          : format(parseISO(request.dates), 'MMM d, yyyy')}
+          ? request.dates.map(formatDate).join(', ')
+          : formatDate(request.dates)}
       </p>
-      {request.timeslot && <p>Timeslot: {request.timeslot}</p>}
-      {request.reason && <p>Reason: {request.reason}</p>}
-      <p>Status: {request.approved}</p>
+      {request.timeslot && (
+        <p className="text-sm text-gray-600">Timeslot: {request.timeslot}</p>
+      )}
+      {request.reason && (
+        <p className="text-sm text-gray-600">Reason: {request.reason}</p>
+      )}
+      <p className="mt-2 text-sm font-semibold text-yellow-600">
+        Status: {request.approved}
+      </p>
     </div>
   );
 }

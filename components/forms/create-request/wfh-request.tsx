@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm, Controller } from 'react-hook-form';
-import { format } from 'date-fns';
+import { format, isWeekend } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,19 +31,31 @@ import {
   PopoverTrigger
 } from '@/components/ui/popover';
 import { toast } from '@/components/ui/use-toast';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-type RequestFormData = {
-  timeslot: string;
-  dates: Date[];
-  reason: string;
-  document: File | undefined;
-};
+const formSchema = z.object({
+  timeslot: z.string().nonempty('Timeslot is required'),
+  dates: z
+    .array(z.date())
+    .refine((dates) => dates.length > 0, 'At least one date is required')
+    .refine((dates) => dates.length <= 5, 'Maximum of 5 dates allowed')
+    .refine(
+      (dates) => dates.every((date) => !isWeekend(date)),
+      'Only weekdays are allowed'
+    ),
+  reason: z.string().nonempty('Reason is required'),
+  document: z.instanceof(File).optional()
+});
+
+type RequestFormData = z.infer<typeof formSchema>;
 
 export default function CreateRequestForm() {
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<RequestFormData>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       timeslot: '',
       dates: [],
@@ -58,7 +70,7 @@ export default function CreateRequestForm() {
     try {
       let documentUrl = null;
 
-      // 1. Upload the document (if it exists)
+      // Only upload the document if form validation passes
       if (data.document) {
         const fileFormData = new FormData();
         fileFormData.append('document', data.document);
@@ -81,11 +93,9 @@ export default function CreateRequestForm() {
 
         const uploadData = await uploadResponse.json();
         documentUrl = uploadData.url;
-      } else {
-        documentUrl = null;
       }
 
-      // 2. Submit the form data
+      // Submit the form data
       const formDataPayload = {
         staff_id: Number(session?.user?.staff_id),
         timeslot: data.timeslot,
@@ -196,11 +206,12 @@ export default function CreateRequestForm() {
                     selected={field.value}
                     onSelect={field.onChange}
                     numberOfMonths={2}
+                    disabled={(date) => isWeekend(date)}
                   />
                 </PopoverContent>
               </Popover>
               <FormDescription>
-                Select the dates for your WFH request.
+                Select the dates for your WFH request (max 5 weekdays).
               </FormDescription>
               <FormMessage />
             </FormItem>

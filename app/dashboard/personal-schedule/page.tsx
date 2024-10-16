@@ -67,24 +67,6 @@ export default function PersonalSchedule() {
     }
   }, [session]);
 
-  // useEffect(() => {
-  //   const fetchApprovedDates = async () => {
-  //     try {
-  //       const response = await getApprovedDates()
-  //       const formattedDates = response.map((item: any) => ({
-  //         staff_id: item.staff_id,
-  //         request_id: item.request_id,
-  //         date: new Date(item.date)
-  //       }))
-  //       setApprovedDates(formattedDates)
-  //     } catch (error) {
-  //       console.error('Error fetching approved dates:', error)
-  //     }
-  //   }
-
-  //   fetchApprovedDates()
-  // }, [])
-
   const generateSchedule = useCallback(() => {
     const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
     const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
