@@ -43,12 +43,10 @@ const ManagerTeamScheduleView: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
   const [nameFilter, setNameFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'wfh' | 'office'>(
-    'all'
-  );
+  const [statusFilter, setStatusFilter] = useState<'all' | 'wfh' | 'office'>('all');
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (session?.user?.staff_id) {
       fetchTeamMembers(session.user.staff_id, date);
     }
   }, [session, date]);
@@ -59,18 +57,41 @@ const ManagerTeamScheduleView: React.FC = () => {
 
   const fetchTeamMembers = async (managerId: number, date: Date) => {
     try {
-      const response = await fetch(
-        `/api/team-members?managerId=${managerId}&date=${format(
-          date,
-          'yyyy-MM-dd'
-        )}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setTeamMembers(data);
-      } else {
-        console.error('Failed to fetch team members');
+      // Fetch requests for the team members
+      const requestsResponse = await fetch(`/api/requests?reportingManager=${managerId}`);
+      if (!requestsResponse.ok) {
+        throw new Error('Failed to fetch requests');
       }
+      const requests = await requestsResponse.json();
+
+      // Filter requests for the selected date and statuses
+      const filteredRequests = requests.filter((request: any) => {
+        return (
+          format(new Date(request.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd') &&
+          (request.status === 'approved' || request.status === 'withdraw_pending')
+        );
+      });
+
+      // Fetch team members
+      const teamMembersResponse = await fetch(`/api/users?reportingManager=${managerId}`);
+      if (!teamMembersResponse.ok) {
+        throw new Error('Failed to fetch team members');
+      }
+      const teamMembersData = await teamMembersResponse.json();
+
+      // Combine team members data with their request status
+      const teamMembersWithStatus = teamMembersData.map((member: any) => {
+        const memberRequest = filteredRequests.find((req: any) => req.staff_id === member.staff_id);
+        return {
+          id: member.staff_id,
+          name: `${member.staff_fname} ${member.staff_lname}`,
+          department: member.department,
+          position: member.position,
+          status: memberRequest ? 'WFH' : 'Office'
+        };
+      });
+
+      setTeamMembers(teamMembersWithStatus);
     } catch (error) {
       console.error('Error fetching team members:', error);
     }
@@ -109,10 +130,6 @@ const ManagerTeamScheduleView: React.FC = () => {
   if (status === 'loading') {
     return <div>Loading...</div>;
   }
-
-  // if (!session || session.user.role_id !== 3) {
-  //   return <div>You do not have permission to view this page.</div>
-  // }
 
   const { wfhCount, officeCount } = getAggregatedManpower();
 
