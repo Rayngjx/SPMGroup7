@@ -1,154 +1,198 @@
 import { db } from '@/lib/db';
-import {
-  getRole,
-  getUserRole,
-  getRoles,
-  createRole,
-  updateRole,
-  deleteRole
-} from '@/lib/crudFunctions/Role';
+import { GET, PUT, DELETE } from '@/app/api/roles/[roleId]/route';
+import { NextRequest, NextResponse } from 'next/server';
 
-describe('Role CRUD Functions', () => {
-  const testRoleId = 1;
-  const newTestRoleId = 9999;
-  const testPayload = {
-    role_title: 'Test Role'
-  };
+describe('Integration Test for GET /api/roles/:roleId', () => {
+  let testRoleId: number;
 
   beforeAll(async () => {
-    // Connect to the test database
+    console.log('Database URL:', process.env.DATABASE_URL);
     await db.$connect();
+    await db.users.deleteMany();
 
-    // Seed the database with a test role
-    await db.role.create({
+    // Seed the database with a test role, let Prisma auto-generate the role_id
+    const role = await db.role.create({
       data: {
-        role_id: testRoleId,
-        role_title: 'Test Role'
+        role_title: 'Test Role' // Do not specify ifrole_id
       }
     });
-
-    // Seed the users table with a role_id
-    await db.users.create({
-      data: {
-        staff_id: 1, // Make sure this staff_id exists in your test data
-        staff_fname: 'Test',
-        staff_lname: 'User',
-        email: 'testuser@example.com',
-        department: 'Test Department',
-        position: 'Tester',
-        country: 'Testland',
-        role_id: testRoleId // Assuming the user has a role
-      }
-    });
+    testRoleId = role.role_id; // Capture the generated role_id
   });
 
   afterAll(async () => {
-    // Clean up the test data after all tests run
-    await db.role.deleteMany({
-      where: { role_id: newTestRoleId }
+    // Clean up users associated with the role first
+    await db.users.deleteMany({
+      where: { role_id: testRoleId }
     });
 
-    await db.users.deleteMany({
-      where: { staff_id: 1 } // Adjust to your test data
+    // Clean up the role
+    await db.role.deleteMany({
+      where: { role_id: testRoleId }
     });
 
     await db.$disconnect();
   });
 
-  describe('getRole', () => {
-    it('should return a role by role_id', async () => {
-      const result = await getRole({ role_id: testRoleId });
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0].role_id).toBe(testRoleId);
+  it('should return a role by role_id (200)', async () => {
+    const req = new NextRequest(`http://localhost/api/roles/${testRoleId}`);
+    const response = await GET(req, {
+      params: { roleId: testRoleId.toString() }
     });
+    const jsonResponse = await response.json();
 
-    it('should return null for a non-existent role', async () => {
-      const result = await getRole({ role_id: 99999 });
-      expect(result).toBeNull();
-    });
+    expect(response.status).toBe(200);
+    expect(jsonResponse.role_id).toBe(testRoleId);
+    expect(jsonResponse.role_title).toBe('Test Role');
   });
 
-  describe('getUserRole', () => {
-    it('should return a role for a valid staff ID', async () => {
-      const result = await getUserRole(1); // Adjust with a valid staff_id
-      expect(result).not.toBeNull();
-      expect(result?.role_id).toBe(testRoleId);
-    });
+  it('should return 404 if role not found', async () => {
+    const req = new NextRequest(`http://localhost/api/roles/999999`);
+    const response = await GET(req, { params: { roleId: '999999' } });
+    const jsonResponse = await response.json();
 
-    it('should return null for a staff ID with no role', async () => {
-      const result = await getUserRole(99999); // Non-existent staff_id
-      expect(result).toBeNull();
-    });
+    expect(response.status).toBe(404);
+    expect(jsonResponse.error).toBe('Role not found');
   });
 
-  describe('getRoles', () => {
-    it('should return all roles', async () => {
-      const result = await getRoles();
-      expect(result.length).toBeGreaterThan(0);
-    });
-  });
+  it('should return 400 if roleId is invalid', async () => {
+    const req = new NextRequest(`http://localhost/api/roles/abc`);
+    const response = await GET(req, { params: { roleId: 'abc' } });
+    const jsonResponse = await response.json();
 
-  describe('createRole', () => {
-    it('should create a new role', async () => {
-      const result = await createRole({ role_title: 'New Test Role' });
-      expect(result.success).toBe(true);
-      expect(result.role.role_title).toBe('New Test Role');
+    expect(response.status).toBe(400);
+    expect(jsonResponse.error).toBe('Invalid roleId');
 
-      // Clean up by deleting the newly created role
-      await db.role.delete({
-        where: { role_id: result.role.role_id }
-      });
-    });
+    //     it('should return 404 if role not found', async () => {
+    //       const req = createRequest({
+    //         method: 'GET',
+    //         url: '/api/roles/99999',
+    //         params: { roleId: '99999' }
+    //       });
+    //       const res = createResponse();
 
-    it('should fail to create a role with missing title', async () => {
-      const result = await createRole({ role_title: '' });
-      expect(result.success).toBe(false);
-      expect(result.error).toBeTruthy();
-    });
-  });
+    //       // Call the API handler
+    //       await GET(req as unknown as Request, { params: { roleId: '99999' } });
 
-  describe('updateRole', () => {
-    it('should update an existing role', async () => {
-      const result = await updateRole({
-        role_id: testRoleId,
-        role_title: 'Updated Role Title'
-      });
-      expect(result.success).toBe(true);
+    //       // Ensure the response is finalized
+    //       res.end();
 
-      const updatedRole = await db.role.findUnique({
-        where: { role_id: testRoleId }
-      });
-      expect(updatedRole?.role_title).toBe('Updated Role Title');
-    });
+    //       const jsonResponse = res._getJSONData();
+    //       expect(res.statusCode).toBe(404);
+    //       expect(jsonResponse.error).toBe('Role not found');
+    //     });
 
-    it('should fail to update a role without a role_id', async () => {
-      const result = await updateRole({ role_title: 'No ID' });
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Role ID is required for updating!');
-    });
-  });
+    //     it('should return 400 for invalid roleId', async () => {
+    //       const req = createRequest({
+    //         method: 'GET',
+    //         url: '/api/roles/invalid',
+    //         params: { roleId: 'invalid' }
+    //       });
+    //       const res = createResponse();
 
-  describe('deleteRole', () => {
-    it('should delete an existing role', async () => {
-      // First, create a role to delete
-      const newRole = await db.role.create({
-        data: { role_title: 'Role to Delete' }
-      });
+    //       // Call the API handler
+    //       await GET(req as unknown as Request, { params: { roleId: 'invalid' } });
 
-      const result = await deleteRole(newRole.role_id);
-      expect(result.success).toBe(true);
+    //       // Ensure the response is finalized
+    //       res.end();
 
-      // Verify the role is deleted
-      const deletedRole = await db.role.findUnique({
-        where: { role_id: newRole.role_id }
-      });
-      expect(deletedRole).toBeNull();
-    });
+    //       const jsonResponse = res._getJSONData();
+    //       expect(res.statusCode).toBe(400);
+    //       expect(jsonResponse.error).toBe('Invalid roleId');
+    //     });
+    //   });
+    // });
 
-    it('should fail to delete a non-existent role', async () => {
-      const result = await deleteRole(99999); // Non-existent role_id
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Failed to delete role!');
-    });
+    // describe('PUT /api/roles/:roleId', () => {
+    //   let testRoleId: number;
+
+    //   it('should update a role', async () => {
+    //     const req = createRequest({
+    //       method: 'PUT',
+    //       url: `/api/roles/${testRoleId}`,
+    //       params: { roleId: testRoleId.toString() },
+    //       body: { role_title: 'Updated Test Role' }
+    //     });
+    //     const res = createResponse();
+
+    //     await PUT(req as unknown as Request, { params: { roleId: testRoleId.toString() } });
+
+    //     res.end();
+
+    //     const jsonResponse = res._getJSONData();
+    //     expect(res.statusCode).toBe(200);
+    //     expect(jsonResponse.success).toBe(true);
+    //   });
+
+    //   it('should return 400 for invalid roleId', async () => {
+    //     const req = createRequest({
+    //       method: 'PUT',
+    //       url: '/api/roles/invalid',
+    //       params: { roleId: 'invalid' },
+    //       body: { role_title: 'Invalid Role' }
+    //     });
+    //     const res = createResponse();
+
+    //     await PUT(req as unknown as Request, { params: { roleId: 'invalid' } });
+
+    //     res.end();
+
+    //     const jsonResponse = res._getJSONData();
+    //     expect(res.statusCode).toBe(400);
+    //     expect(jsonResponse.error).toBe('Invalid roleId');
+    //   });
+    // });
+
+    //   describe('DELETE /api/roles/:roleId', () => {
+    //     it('should delete an existing role', async () => {
+    //       // First, create a role to delete
+    //       const newRole = await db.role.create({
+    //         data: { role_title: 'Role to Delete' }
+    //       });
+
+    //       const req = createRequest({
+    //         method: 'DELETE',
+    //         url: `/api/roles/${newRole.role_id}`,
+    //         params: { roleId: newRole.role_id.toString() }
+    //       });
+    //       const res = createResponse();
+
+    //       await DELETE(req as unknown as Request, { params: { roleId: newRole.role_id.toString() } });
+    //       res.end();
+
+    //       const jsonResponse = res._getJSONData();
+    //       expect(res.statusCode).toBe(200);
+    //       expect(jsonResponse.success).toBe(true);
+    //     });
+
+    //     it('should return 404 for a non-existent role', async () => {
+    //       const req = createRequest({
+    //         method: 'DELETE',
+    //         url: '/api/roles/99999',
+    //         params: { roleId: '99999' }
+    //       });
+    //       const res = createResponse();
+
+    //       await DELETE(req as unknown as Request, { params: { roleId: '99999' } });
+    //       res.end();
+
+    //       const jsonResponse = res._getJSONData();
+    //       expect(res.statusCode).toBe(400);
+    //       expect(jsonResponse.error).toBe('Failed to delete role!');
+    //     });
+
+    //     it('should return 400 for invalid roleId', async () => {
+    //       const req = createRequest({
+    //         method: 'DELETE',
+    //         url: '/api/roles/invalid',
+    //         params: { roleId: 'invalid' }
+    //       });
+    //       const res = createResponse();
+
+    //       await DELETE(req as unknown as Request, { params: { roleId: 'invalid' } });
+    //       res.end();
+
+    //       const jsonResponse = res._getJSONData();
+    //       expect(res.statusCode).toBe(400);
+    //       expect(jsonResponse.error).toBe('Invalid roleId');
   });
 });

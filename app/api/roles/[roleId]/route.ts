@@ -3,14 +3,18 @@ import { NextResponse } from 'next/server';
 import { updateRole, deleteRole } from '@/lib/crudFunctions/Role';
 
 // Handle GET request to fetch a specific role by roleId
+
 export async function GET(
   req: Request,
   { params }: { params: { roleId: string } }
 ) {
   const roleId = parseInt(params.roleId);
 
-  if (!roleId) {
-    return NextResponse.json({ error: 'Invalid roleId' }, { status: 400 });
+  if (isNaN(roleId) || roleId <= 0) {
+    return new NextResponse(JSON.stringify({ error: 'Invalid roleId' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -19,13 +23,20 @@ export async function GET(
     });
 
     return role
-      ? NextResponse.json(role)
-      : NextResponse.json({ error: 'Role not found' }, { status: 404 });
+      ? new NextResponse(JSON.stringify(role), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      : new NextResponse(JSON.stringify({ error: 'Role not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch role' },
-      { status: 500 }
-    );
+    console.error('Error fetching role:', error);
+    return new NextResponse(JSON.stringify({ error: 'Failed to fetch role' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
