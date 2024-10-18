@@ -13,11 +13,6 @@ import CreateRequestForm from '@/components/forms/create-request/wfh-request';
 
 export default async function page() {
   const session = await auth();
-  // console.log('Session: ', session); // Debug the session object
-  // let getUsers;
-  if (!session) {
-    return <p>Please log in to view this page.</p>;
-  }
 
   if (session?.user?.staff_id) {
     const staffId = session.user.staff_id;

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useTransition } from 'react';
 import { login } from '@/actions/login';
 import { FormInput } from '@/components/auth/form-input';
-import { toast } from 'sonner';
+import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
