@@ -2,7 +2,17 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
-import { cloneUniformsGroups } from 'three/src/renderers/shaders/UniformsUtils.js';
+import { Request } from '@/types/db-types';
+
+// Define the interface for department staff
+interface DepartmentStaff {
+  id: number;
+  name: string;
+  position: string;
+  wfhDates: string[];
+  reporting_manager: string;
+  role_id: number;
+}
 
 const TeamScheduleCalendar = dynamic(
   () => import('@/components/dashboard/staffTeamSchedule/EnhancedWFHCalendar'),
@@ -12,20 +22,25 @@ const TeamScheduleCalendar = dynamic(
   }
 );
 
-async function getApprovedDates(teamLeadId: number) {
+async function getApprovedRequests(teamLeadId: number) {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/approved-dates/team/${teamLeadId}`
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/requests/?reportingManager=${teamLeadId}`
   );
   if (!response.ok) {
-    throw new Error('Failed to fetch approved dates');
+    throw new Error('Failed to fetch approved requests');
   }
-  console.log(response);
-  return response.json();
+
+  const data = await response.json();
+
+  return data.filter(
+    (request: any) =>
+      request.status === 'approved' || request.status === 'withdrawn_pending'
+  );
 }
 
 async function getUserDetails(staffId: number) {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/${staffId}`
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/?staffId=${staffId}`
   );
   if (!response.ok) {
     throw new Error('Failed to fetch user details');
@@ -36,47 +51,43 @@ async function getUserDetails(staffId: number) {
 
 export default function TeamSchedulePage() {
   const { data: session } = useSession();
-
-  if (!session) {
-    return <p>Please log in to see your team schedule.</p>;
-  }
-
-  const reportingManagerId = session.user.reporting_manager; // Get the reporting manager ID
-  const [departmentStaff, setDepartmentStaff] = useState([]);
+  const [departmentStaff, setDepartmentStaff] = useState<DepartmentStaff[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchTeamData() {
+      if (!session?.user?.staff_id) return;
+
       try {
-        const approvedDates =
-          reportingManagerId !== null
-            ? await getApprovedDates(reportingManagerId)
-            : [];
-        console.log(approvedDates, 'lks');
-        // Collect unique staff IDs from approved dates
-        const staffIds = [
-          ...new Set(approvedDates.map((date) => date.staff_id))
-        ];
+        // Fetch approved requests for the current user's team
+        const approvedRequests = await getApprovedRequests(
+          session.user.staff_id
+        );
+
+        // Collect unique staff IDs from approved requests
+        const staffIds: number[] = Array.from(
+          new Set(approvedRequests.map((request: Request) => request.staff_id))
+        );
 
         // Fetch user details for each staff member
         const userDetailsPromises = staffIds.map((id) => getUserDetails(id));
         const usersDetails = await Promise.all(userDetailsPromises);
 
-        // Map user details with their approved dates
+        // Map user details with their approved requests
         const formattedDepartmentStaff = usersDetails.map((user) => {
-          const userApprovedDates = approvedDates
-            .filter((date) => date.staff_id === user.staff_id)
-            .map((date) => date.date); // Assuming 'date' is the approved date
+          const userApprovedDates = approvedRequests
+            .filter((request: Request) => request.staff_id === user.staff_id) // Specify the type here
+            .map((request: Request) => request.date); // Explicitly define the type here
 
           return {
-            id: user.staff_id, // Assuming 'id' is required for the key in tables
+            id: user.staff_id,
             name: `${user.staff_fname} ${user.staff_lname}`,
             position: user.position,
             wfhDates: userApprovedDates,
-            reporting_manager: user.reporting_manager
+            reporting_manager: user.reporting_manager,
+            role_id: user.role_id ?? 1 // Provide a default value if role_id is null
           };
         });
-        console.log(formattedDepartmentStaff, 'fds');
 
         setDepartmentStaff(formattedDepartmentStaff);
       } catch (error) {
@@ -87,7 +98,11 @@ export default function TeamSchedulePage() {
     }
 
     fetchTeamData();
-  }, [reportingManagerId]);
+  }, [session]);
+
+  if (!session) {
+    return <p>Please log in to see your team schedule.</p>;
+  }
 
   if (loading) {
     return <p>Loading team data...</p>;
@@ -98,11 +113,10 @@ export default function TeamSchedulePage() {
       <h1 className="mb-4 text-2xl font-bold">Team Schedule</h1>
       <Suspense fallback={<div>Loading...</div>}>
         <TeamScheduleCalendar
-          currentUser={session.user} // Pass current user details if needed
-          departmentStaff={departmentStaff} // Pass the formatted department staff data
+          currentUser={session.user}
+          departmentStaff={departmentStaff}
         />
       </Suspense>
     </div>
   );
 }
-
