@@ -33,8 +33,9 @@ interface Staff {
   id: number;
   name: string;
   position: string;
-  reporting_manager: number;
   wfhDates: string[];
+  reporting_manager: string;
+  role_id: number;
 }
 
 interface TeamScheduleCalendarProps {

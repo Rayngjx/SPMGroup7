@@ -2,7 +2,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
-import { Request } from '@/types/db-types';
+import { requests } from '@prisma/client';
 
 // Define the interface for department staff
 interface DepartmentStaff {
@@ -53,6 +53,12 @@ export default function TeamSchedulePage() {
   const { data: session } = useSession();
   const [departmentStaff, setDepartmentStaff] = useState<DepartmentStaff[]>([]);
   const [loading, setLoading] = useState(true);
+  const currentUser = {
+    staff_id: session?.user.staff_id ?? 0, // Provide a default value
+    staff_fname: session?.user.staff_fname ?? '', // Provide a default value
+    staff_lname: session?.user.staff_lname ?? '', // Provide a default value
+    role_id: session?.user.role_id ?? 1 // Provide a default value
+  };
 
   useEffect(() => {
     async function fetchTeamData() {
@@ -66,7 +72,7 @@ export default function TeamSchedulePage() {
 
         // Collect unique staff IDs from approved requests
         const staffIds: number[] = Array.from(
-          new Set(approvedRequests.map((request: Request) => request.staff_id))
+          new Set(approvedRequests.map((request: requests) => request.staff_id))
         );
 
         // Fetch user details for each staff member
@@ -76,8 +82,8 @@ export default function TeamSchedulePage() {
         // Map user details with their approved requests
         const formattedDepartmentStaff = usersDetails.map((user) => {
           const userApprovedDates = approvedRequests
-            .filter((request: Request) => request.staff_id === user.staff_id) // Specify the type here
-            .map((request: Request) => request.date); // Explicitly define the type here
+            .filter((request: requests) => request.staff_id === user.staff_id) // Specify the type here
+            .map((request: requests) => request.date); // Explicitly define the type here
 
           return {
             id: user.staff_id,
@@ -113,7 +119,7 @@ export default function TeamSchedulePage() {
       <h1 className="mb-4 text-2xl font-bold">Team Schedule</h1>
       <Suspense fallback={<div>Loading...</div>}>
         <TeamScheduleCalendar
-          currentUser={session.user}
+          currentUser={currentUser}
           departmentStaff={departmentStaff}
         />
       </Suspense>
