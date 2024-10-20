@@ -49,7 +49,7 @@ export async function GET(request: Request) {
         document_url: true,
         created_at: true,
         last_updated: true,
-        temp_replacement: true,
+        // temp_replacement: true,
         users: {
           select: {
             staff_fname: true,
