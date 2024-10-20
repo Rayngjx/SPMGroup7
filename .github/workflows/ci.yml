@@ -1,0 +1,66 @@
+name: CI Workflow
+
+on:
+  push:
+    branches:
+      - unittest_v1
+  pull_request:
+    branches:
+      - unittest_v1
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # 2. Set up Node.js (version 18.18.2)
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18.18.2'
+          cache: 'npm'
+
+      # 3. Cache node_modules to speed up build times
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 4. Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # 5. Run ESLint for code linting
+      - name: Run Lint
+        run: npm run lint
+
+      # 6. Run Prettier to check code formatting
+      - name: Run Prettier
+        run: npm run prettier -- --check
+
+      # 7. Set environment variables from GitHub Secrets
+      - name: Set environment variables
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
+          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> $GITHUB_ENV
+          echo "GITHUB_ID=${{ secrets.GITHUB_ID }}" >> $GITHUB_ENV
+          echo "GITHUB_SECRET=${{ secrets.GITHUB_SECRET }}" >> $GITHUB_ENV
+
+      # 8. Run Jest tests (integration tests)
+      - name: Run Jest Integration Tests
+        run: npm run test
+
+      # 9. [Optional] If you need code coverage
+      - name: Upload Coverage
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage
+          path: coverage
