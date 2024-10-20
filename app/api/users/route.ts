@@ -18,7 +18,6 @@ export async function GET(request: Request) {
     users = await prisma.users.findMany({
       where: { reporting_manager: parseInt(reportingManager) }
     });
-    // Jon added this to search for unique staff_id
   } else if (staff_id) {
     users = await prisma.users.findUnique({
       where: { staff_id: parseInt(staff_id) }
