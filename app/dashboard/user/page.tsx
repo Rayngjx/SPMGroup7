@@ -31,7 +31,7 @@ export default function Page() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/requests?staffId=${staffId}`);
+      const response = await fetch(`/api/requests?staff_id=${staffId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch calendar data');
       }

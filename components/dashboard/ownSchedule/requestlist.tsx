@@ -54,7 +54,7 @@ export default function RequestList({ requests }: RequestListProps) {
           if (request.processor_id) {
             try {
               const response = await fetch(
-                `/api/users?staffId=${request.processor_id}`
+                `/api/users?staff_id=${request.processor_id}`
               );
               if (response.ok) {
                 const userData = await response.json();
