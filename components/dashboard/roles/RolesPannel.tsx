@@ -1,22 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Check,
-  ChevronsUpDown,
-  Plus,
-  MoreHorizontal,
-  Users,
-  UserPlus,
-  Trash2,
-  Search,
-  Shield,
-  CreditCard,
-  Code,
-  Eye,
-  Bell,
-  User
-} from 'lucide-react';
+import { MoreHorizontal, UserPlus, Trash2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,12 +27,11 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger
+  DialogTitle
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast, Toaster } from 'sonner';
 import { motion } from 'framer-motion';
 import { role } from '@prisma/client';
@@ -95,7 +79,7 @@ export default function Component_Roles({ dataRoles }: { dataRoles: any }) {
   const handleAddRole = async () => {
     if (newRole.name) {
       try {
-        const res = await fetch('http://localhost:3000/api/roles/all', {
+        const res = await fetch('http://localhost:3000/api/roles', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -131,7 +115,7 @@ export default function Component_Roles({ dataRoles }: { dataRoles: any }) {
     if (newRole.name && roleToEdit) {
       try {
         console.log('Role to edit:', newRole.name);
-        const res = await fetch(`http://localhost:3000/api/roles/all`, {
+        const res = await fetch(`http://localhost:3000/api/roles`, {
           method: 'PUT', // PUT method for updating an existing role
           headers: {
             'Content-Type': 'application/json'
@@ -176,7 +160,7 @@ export default function Component_Roles({ dataRoles }: { dataRoles: any }) {
     if (roleToDelete) {
       try {
         const res = await fetch(
-          `http://localhost:3000/api/roles/all?role_id=${roleToDelete.role_id}`,
+          `http://localhost:3000/api/roles?role_id=${roleToDelete.role_id}`,
           {
             method: 'DELETE'
           }

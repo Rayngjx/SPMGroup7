@@ -20,7 +20,7 @@ export default async function page() {
 
   const session = await auth();
 
-  const data = await fetch('http://localhost:3000/api/roles/all');
+  const data = await fetch('http://localhost:3000/api/roles');
   const roles = await data.json();
 
   //   getUsers = getUsers ?? []; // Provide a default value if getUsers is undefined
@@ -29,7 +29,7 @@ export default async function page() {
     <PageContainer>
       {
         // This is a conditional rendering of the page title
-        session?.user?.role_id === 2 ? (
+        session?.user?.role_id === 1 ? (
           <>
             <h1 className="text-3xl font-semibold">Roles</h1>
             <div className="space-y-2">
