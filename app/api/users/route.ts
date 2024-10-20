@@ -12,7 +12,11 @@ export async function GET(request: Request) {
 
   let users;
 
-  if (department) {
+  if (staffId) {
+    users = await prisma.users.findUnique({
+      where: { staff_id: parseInt(staffId) }
+    });
+  } else if (department) {
     users = await prisma.users.findMany({ where: { department } });
   } else if (reportingManager) {
     users = await prisma.users.findMany({

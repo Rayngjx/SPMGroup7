@@ -43,7 +43,9 @@ const ManagerTeamScheduleView: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
   const [nameFilter, setNameFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'wfh' | 'office'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'wfh' | 'office'>(
+    'all'
+  );
 
   useEffect(() => {
     if (session?.user?.staff_id) {
@@ -58,7 +60,9 @@ const ManagerTeamScheduleView: React.FC = () => {
   const fetchTeamMembers = async (managerId: number, date: Date) => {
     try {
       // Fetch requests for the team members
-      const requestsResponse = await fetch(`/api/requests?reportingManager=${managerId}`);
+      const requestsResponse = await fetch(
+        `/api/requests?reportingManager=${managerId}`
+      );
       if (!requestsResponse.ok) {
         throw new Error('Failed to fetch requests');
       }
@@ -67,13 +71,17 @@ const ManagerTeamScheduleView: React.FC = () => {
       // Filter requests for the selected date and statuses
       const filteredRequests = requests.filter((request: any) => {
         return (
-          format(new Date(request.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd') &&
-          (request.status === 'approved' || request.status === 'withdraw_pending')
+          format(new Date(request.date), 'yyyy-MM-dd') ===
+            format(date, 'yyyy-MM-dd') &&
+          (request.status === 'approved' ||
+            request.status === 'withdraw_pending')
         );
       });
 
       // Fetch team members
-      const teamMembersResponse = await fetch(`/api/users?reportingManager=${managerId}`);
+      const teamMembersResponse = await fetch(
+        `/api/users?reportingManager=${managerId}`
+      );
       if (!teamMembersResponse.ok) {
         throw new Error('Failed to fetch team members');
       }
@@ -81,7 +89,9 @@ const ManagerTeamScheduleView: React.FC = () => {
 
       // Combine team members data with their request status
       const teamMembersWithStatus = teamMembersData.map((member: any) => {
-        const memberRequest = filteredRequests.find((req: any) => req.staff_id === member.staff_id);
+        const memberRequest = filteredRequests.find(
+          (req: any) => req.staff_id === member.staff_id
+        );
         return {
           id: member.staff_id,
           name: `${member.staff_fname} ${member.staff_lname}`,
