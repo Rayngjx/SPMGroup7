@@ -14,7 +14,13 @@ import {
 } from '@/components/ui/tooltip';
 import { useSession } from 'next-auth/react';
 import { format, isWeekend, parseISO } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CalendarEvent {
@@ -23,7 +29,13 @@ interface CalendarEvent {
   start: Date;
   end: Date;
   extendedProps: {
-    status: 'approved' | 'pending' | 'withdrawn' | 'rejected' | 'withdraw_pending';
+    status:
+      | 'approved'
+      | 'pending'
+      | 'withdrawn'
+      | 'rejected'
+      | 'withdraw_pending'
+      | 'cancelled';
     reason?: string;
     timeslot?: string;
   };
@@ -35,7 +47,9 @@ export default function PersonalSchedule() {
   const [filteredEvents, setFilteredEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'withdrawn'>('all');
+  const [filter, setFilter] = useState<
+    'all' | 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'cancelled'
+  >('all');
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.staff_id) {
@@ -96,6 +110,8 @@ export default function PersonalSchedule() {
         return 'Withdrawn';
       case 'rejected':
         return 'Rejected';
+      case 'cancelled':
+        return 'Cancelled';
       default:
         return 'Unknown';
     }
@@ -106,11 +122,15 @@ export default function PersonalSchedule() {
     if (filter === 'all') {
       filtered = events;
     } else if (filter === 'pending') {
-      filtered = events.filter(event => 
-        event.extendedProps.status === 'pending' || event.extendedProps.status === 'withdraw_pending'
+      filtered = events.filter(
+        (event) =>
+          event.extendedProps.status === 'pending' ||
+          event.extendedProps.status === 'withdraw_pending'
       );
     } else {
-      filtered = events.filter(event => event.extendedProps.status === filter);
+      filtered = events.filter(
+        (event) => event.extendedProps.status === filter
+      );
     }
     console.log('Filtered Events:', filtered);
     setFilteredEvents(filtered);
@@ -123,17 +143,20 @@ export default function PersonalSchedule() {
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger
-            className={`h-full w-full ${color} rounded p-1 text-white text-xs overflow-hidden`}
-          >
-            {event.title}
+          <TooltipTrigger asChild>
+            <div
+              className={`h-full w-full ${color} cursor-pointer overflow-hidden rounded p-1 text-xs text-white`}
+            >
+              {event.title}
+            </div>
           </TooltipTrigger>
           <TooltipContent>
             <p>
               <strong>Date:</strong> {format(event.start, 'MMM d, yyyy')}
             </p>
             <p>
-              <strong>Status:</strong> {getDisplayStatus(event.extendedProps.status)}
+              <strong>Status:</strong>{' '}
+              {getDisplayStatus(event.extendedProps.status)}
             </p>
             {event.extendedProps.timeslot && (
               <p>
@@ -162,13 +185,17 @@ export default function PersonalSchedule() {
         return 'bg-gray-600';
       case 'rejected':
         return 'bg-red-600';
+      case 'cancelled':
+        return 'bg-purple-600';
       default:
         return 'bg-gray-400';
     }
   };
 
   const getDisplayStatus = (status: string): string => {
-    return status === 'withdraw_pending' ? 'Pending' : status.charAt(0).toUpperCase() + status.slice(1);
+    return status === 'withdraw_pending'
+      ? 'Pending'
+      : status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   return (
@@ -189,7 +216,7 @@ export default function PersonalSchedule() {
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay'
               }}
-              events={filteredEvents}
+              events={events}
               eventContent={renderEventContent}
               dayCellClassNames={(arg) =>
                 isWeekend(arg.date) ? 'bg-gray-100' : ''
@@ -207,7 +234,10 @@ export default function PersonalSchedule() {
       <Card>
         <CardHeader>
           <CardTitle>WFH Requests</CardTitle>
-          <Select value={filter} onValueChange={(value: any) => setFilter(value)}>
+          <Select
+            value={filter}
+            onValueChange={(value: any) => setFilter(value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Filter requests" />
             </SelectTrigger>
@@ -217,6 +247,7 @@ export default function PersonalSchedule() {
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="withdrawn">Withdrawn</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
         </CardHeader>
@@ -227,23 +258,28 @@ export default function PersonalSchedule() {
             ) : (
               <ul className="space-y-4">
                 {filteredEvents.map((event) => (
-                  <li
-                    key={event.id}
-                    className="rounded border p-4"
-                  >
+                  <li key={event.id} className="rounded border p-4">
                     <h3 className="font-bold">{event.title}</h3>
                     <p>Date: {format(event.start, 'MMMM d, yyyy')}</p>
-                    {event.extendedProps.timeslot && <p>Timeslot: {event.extendedProps.timeslot}</p>}
-                    {event.extendedProps.reason && <p>Reason: {event.extendedProps.reason}</p>}
-                    <p className={`font-semibold ${
-                      event.extendedProps.status === 'approved'
-                        ? 'text-green-600'
-                        : event.extendedProps.status === 'rejected'
-                        ? 'text-red-600'
-                        : event.extendedProps.status === 'withdrawn'
-                        ? 'text-gray-600'
-                        : 'text-yellow-600'
-                    }`}>
+                    {event.extendedProps.timeslot && (
+                      <p>Timeslot: {event.extendedProps.timeslot}</p>
+                    )}
+                    {event.extendedProps.reason && (
+                      <p>Reason: {event.extendedProps.reason}</p>
+                    )}
+                    <p
+                      className={`font-semibold ${
+                        event.extendedProps.status === 'approved'
+                          ? 'text-green-600'
+                          : event.extendedProps.status === 'rejected'
+                          ? 'text-red-600'
+                          : event.extendedProps.status === 'withdrawn'
+                          ? 'text-gray-600'
+                          : event.extendedProps.status === 'cancelled'
+                          ? 'text-purple-600'
+                          : 'text-yellow-600'
+                      }`}
+                    >
                       Status: {getDisplayStatus(event.extendedProps.status)}
                     </p>
                   </li>
