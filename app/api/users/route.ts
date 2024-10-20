@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const staffId = searchParams.get('staffId');
   const department = searchParams.get('department');
   const reportingManager = searchParams.get('reportingManager');
   const staff_id = searchParams.get('staff_id');
