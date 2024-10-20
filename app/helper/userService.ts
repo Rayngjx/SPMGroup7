@@ -18,3 +18,8 @@ export async function checkIfStaff(userId: users['staff_id']) {
   const user = await getUser(userId);
   return user.role_id === 2;
 }
+
+export async function checkIfManager(userId: users['staff_id']) {
+  const user = await getUser(userId);
+  return user.role_id === 3;
+}
