@@ -37,8 +37,8 @@ import {
 import { format, isValid, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-import { getApprovedDatesWithUserDetails } from '@/lib/crudFunctions/ApprovedDates';
-import { getAllUsers, getUser } from '@/lib/crudFunctions/Staff';
+// import { getApprovedDatesWithUserDetails } from '@/lib/crudFunctions/ApprovedDates';
+// import { getAllUsers, getUser } from '@/lib/crudFunctions/Staff';
 
 const departmentColors: Record<string, string> = {
   'Human Resources': 'bg-blue-600',
@@ -61,7 +61,22 @@ interface Employee {
   position: string;
   email: string;
   reason: string;
+  status: string;
+  timeslot: string;
+  document_url: string;
 }
+// staff_id: item.staff_id,
+//               request_id: item.request_id,
+//               date: format(parsedDate, 'yyyy-MM-dd'),
+//               staff_fname: item.users.staff_fname,
+//               staff_lname: item.users.staff_lname,
+//               department: item.users.department,
+//               position: item.users.position,
+//               email: item.users.email,
+//               reason: item.reason,
+//               status: item.status,
+//               timeslot: item.timeslot,
+//               document_url: item.document_url
 
 interface AllUserDetails {
   staff_id: number;
@@ -116,21 +131,29 @@ export default function WFHCalendar() {
   const [currentWfhPage, setCurrentWfhPage] = useState(1);
   const [currentPresentPage, setCurrentPresentPage] = useState(1);
   const employeesPerPage = 10;
+  const [logs, setLogs] = useState<{
+    staff_id: number;
+    processor_id: number;
+    reason: string;
+  }>([]);
 
   useEffect(() => {
+    //fixed
     const fetchAllUserDetails = async () => {
       try {
-        const response = await getAllUsers();
+        // const response = await getAllUsers();
+        let response = await fetch(`/api/users/`);
+
         if (!response) {
           throw new Error('Error fetching users');
         }
-
-        console.log('Raw response from getting all users:', response);
-        setAllUserDetails(response);
+        const data = await response.json();
+        console.log('Raw response from getting all users:', data);
+        setAllUserDetails(data);
 
         // Extract unique department names
         const departments = [
-          ...new Set(response.map((user: AllUserDetails) => user.department))
+          ...new Set(data.map((user: AllUserDetails) => user.department))
         ];
         setAllDepartments(departments);
         setSelectedDepartments(departments);
@@ -146,40 +169,44 @@ export default function WFHCalendar() {
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const response = await getApprovedDatesWithUserDetails();
+        // const response = await getApprovedDatesWithUserDetails();
+        const response = await fetch(`/api/requests/`);
         if (!response) {
           throw new Error('Error fetching users');
         }
+        const data = await response.json();
+        console.log('Raw response from gettingAllUserDetails:', data);
 
-        console.log(
-          'Raw response from getApprovedDatesWithUserDetails:',
-          response
-        );
-
-        const formattedData: Employee[] = response
+        const formattedData: Employee[] = data
           .map((item: any) => {
-            let parsedDate;
-            try {
-              parsedDate = new Date(item.date);
-              if (!isValid(parsedDate)) {
-                throw new Error('Invalid date');
+            if (item.status == 'approved') {
+              let parsedDate;
+              try {
+                parsedDate = new Date(item.date);
+                if (!isValid(parsedDate)) {
+                  throw new Error('Invalid date');
+                }
+              } catch (error) {
+                console.error('Error parsing date:', item.date, error);
+                return null;
               }
-            } catch (error) {
-              console.error('Error parsing date:', item.date, error);
+              return {
+                staff_id: item.staff_id,
+                request_id: item.request_id,
+                date: format(parsedDate, 'yyyy-MM-dd'),
+                staff_fname: item.users.staff_fname,
+                staff_lname: item.users.staff_lname,
+                department: item.users.department,
+                position: item.users.position,
+                email: item.users.email,
+                reason: item.reason,
+                status: item.status,
+                timeslot: item.timeslot,
+                document_url: item.document_url
+              };
+            } else {
               return null;
             }
-
-            return {
-              staff_id: item.staff_id,
-              request_id: item.request_id,
-              date: format(parsedDate, 'yyyy-MM-dd'),
-              staff_fname: item.users.staff_fname,
-              staff_lname: item.users.staff_lname,
-              department: item.users.department,
-              position: item.users.position,
-              email: item.users.email,
-              reason: item.requests.reason
-            };
           })
           .filter(Boolean);
 
@@ -626,6 +653,7 @@ export default function WFHCalendar() {
                     <TableHead>Name</TableHead>
                     <TableHead>Position</TableHead>
                     <TableHead>Reason</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -639,6 +667,7 @@ export default function WFHCalendar() {
                         <TableCell>{`${employee.staff_fname} ${employee.staff_lname}`}</TableCell>
                         <TableCell>{employee.position}</TableCell>
                         <TableCell>{employee.reason}</TableCell>
+                        <TableCell>{employee.status}</TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
@@ -787,6 +816,10 @@ export default function WFHCalendar() {
               <div>
                 <h3 className="text-sm font-medium">WFH Date</h3>
                 <p>{selectedEmployee.date}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium">Status</h3>
+                <p>{selectedEmployee.status}</p>
               </div>
             </div>
           )}

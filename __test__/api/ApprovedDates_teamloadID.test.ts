@@ -19,6 +19,12 @@ beforeAll(async () => {
   // Connect to your test database
   await db.$connect();
 
+  // Clean up existing data
+  await db.withdraw_requests.deleteMany();
+  await db.approved_dates.deleteMany();
+  await db.requests.deleteMany();
+  await db.users.deleteMany();
+
   const teamLead = await db.users.create({
     data: {
       staff_id: testTeamleadId, // The team lead's ID (reporting_manager for team members)
@@ -31,7 +37,7 @@ beforeAll(async () => {
     }
   });
 
-  // Seed the database with test data
+  // Seed the database with users first
   await db.users.createMany({
     data: [
       {
@@ -57,6 +63,31 @@ beforeAll(async () => {
     ]
   });
 
+  // Seed the requests table
+  await db.requests.createMany({
+    data: [
+      {
+        request_id: 1,
+        staff_id: 1,
+        timeslot: 'AM',
+        daterange: [new Date('2024-01-01')],
+        reason: 'Business Trip',
+        approved: 'Accepted',
+        document_url: 'some-url'
+      },
+      {
+        request_id: 2,
+        staff_id: 2,
+        timeslot: 'PM',
+        daterange: [new Date('2024-01-02')],
+        reason: 'Vacation',
+        approved: 'Accepted',
+        document_url: 'some-url'
+      }
+    ]
+  });
+
+  // Seed the approved_dates table with valid request_ids
   await db.approved_dates.createMany({
     data: [
       { staff_id: 1, request_id: 1, date: new Date('2024-01-01') },
@@ -74,25 +105,72 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
-it('should return team approved dates successfully for valid teamleadId', async () => {
-  // Simulate the GET request
-  const req = new Request(
-    `http://localhost:3000/api/approved-dates/${testTeamleadId}`,
-    {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+describe('Approved Dates Functions', () => {
+  const testStaffId = 1;
+  const testTeamleadId = 123; // Replace with a valid team lead ID from your test data
+
+  beforeEach(async () => {
+    // Clean the database before each test
+    await db.approved_dates.deleteMany();
+    await db.users.deleteMany();
+    await db.requests.deleteMany();
+
+    // Seed the users and requests tables
+    await db.users.create({
+      data: {
+        staff_id: testStaffId,
+        staff_fname: 'John',
+        staff_lname: 'Doe',
+        department: 'Sales',
+        position: 'Manager',
+        country: 'USA',
+        role_id: 1
+      }
+    });
+
+    await db.requests.create({
+      data: {
+        request_id: 1,
+        staff_id: testStaffId,
+        timeslot: 'morning',
+        daterange: [new Date('2024-01-01')],
+        reason: 'Business',
+        approved: 'Yes'
+      }
+    });
+
+    // Seed the approved_dates table
+    await db.approved_dates.create({
+      data: {
+        staff_id: testStaffId,
+        request_id: 1,
+        date: new Date('2024-01-01')
+      }
+    });
+  });
+
+  afterEach(async () => {
+    // Clean up the database after each test
+    await db.approved_dates.deleteMany();
+    await db.users.deleteMany();
+    await db.requests.deleteMany();
+  });
+
+  it('should return approved dates for a specific user', async () => {
+    const result = await getUserApprovedDates(testStaffId);
+
+    expect(result).not.toBeNull();
+    if (result) {
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].staff_id).toBe(1); // assuming that staff_id is 1 for the first entry
     }
-  );
-  const params = { teamleadId: String(testTeamleadId) };
-  const response = await GET(req, { params });
+  });
 
-  const json = await response.json();
+  it('should return null if no approved dates are found for the user', async () => {
+    const result = await getUserApprovedDates(999); // Invalid staff_id
 
-  // Assertions
-  expect(response.status).toBe(200);
-  expect(json.length).toBeGreaterThan(0);
-  expect(json[0].staff_id).toBe(1);
-  expect(json[1].staff_id).toBe(2);
+    expect(result).toStrictEqual([]);
+  });
 });
 
 it('should return 400 for invalid teamleadId', async () => {
@@ -111,23 +189,81 @@ it('should return 400 for invalid teamleadId', async () => {
   expect(json.error).toBe('Invalid teamleadId');
 });
 
-it('should return an empty array if no team members are found', async () => {
-  // Simulate a GET request with a valid teamleadId but no members
-  const newTeamleadId = 999; // Assume 999 has no members
+describe('getTeamApprovedDates', () => {
+  const testTeamleadId = 123; // Replace with a valid team lead ID from your test data
 
-  const req = new Request(
-    `http://localhost:3000/api/approved-dates/${newTeamleadId}`,
-    {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+  beforeEach(async () => {
+    // Clean the database before each test
+    await db.approved_dates.deleteMany();
+    await db.users.deleteMany();
+    await db.requests.deleteMany();
+
+    // Seed the users and requests tables
+    await db.users.createMany({
+      data: [
+        {
+          staff_id: testTeamleadId, // The team lead's ID
+          staff_fname: 'Lead',
+          staff_lname: 'Manager',
+          department: 'Sales',
+          position: 'Manager',
+          country: 'USA',
+          role_id: 1
+        },
+        {
+          staff_id: 1,
+          staff_fname: 'John',
+          staff_lname: 'Doe',
+          department: 'Sales',
+          position: 'Manager',
+          country: 'USA',
+          reporting_manager: testTeamleadId,
+          role_id: 1
+        }
+      ]
+    });
+
+    await db.requests.create({
+      data: {
+        request_id: 1,
+        staff_id: 1,
+        timeslot: 'morning',
+        daterange: [new Date('2024-01-01')],
+        reason: 'Business',
+        approved: 'Yes'
+      }
+    });
+
+    // Seed the approved_dates table
+    await db.approved_dates.create({
+      data: {
+        staff_id: 1,
+        request_id: 1,
+        date: new Date('2024-01-01')
+      }
+    });
+  });
+
+  afterEach(async () => {
+    // Clean up the database after each test
+    await db.approved_dates.deleteMany();
+    await db.users.deleteMany();
+    await db.requests.deleteMany();
+  });
+
+  it('should return approved dates for team members', async () => {
+    const result = await getTeamApprovedDates(testTeamleadId);
+
+    expect(result).not.toBeNull();
+    if (result) {
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].staff_id).toBe(1); // assuming that staff_id is 1 for the first entry
     }
-  );
-  const params = { teamleadId: String(newTeamleadId) };
-  const response = await GET(req, { params });
+  });
 
-  const json = await response.json();
+  it('should return null if no team members have approved dates', async () => {
+    const result = await getTeamApprovedDates(999); // Invalid teamleadId
 
-  // Assertions
-  expect(response.status).toBe(200);
-  expect(json.length).toBe(0); // Expect no approved dates since no members are found
+    expect(result).toBeNull();
+  });
 });

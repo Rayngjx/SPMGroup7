@@ -5,9 +5,10 @@ const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const staffId = searchParams.get('staffId');
   const department = searchParams.get('department');
   const reportingManager = searchParams.get('reportingManager');
-  const staffId = searchParams.get('staffId');
+  const staff_id = searchParams.get('staff_id');
 
   let users;
 
@@ -20,6 +21,10 @@ export async function GET(request: Request) {
   } else if (reportingManager) {
     users = await prisma.users.findMany({
       where: { reporting_manager: parseInt(reportingManager) }
+    });
+  } else if (staff_id) {
+    users = await prisma.users.findUnique({
+      where: { staff_id: parseInt(staff_id) }
     });
   } else {
     users = await prisma.users.findMany();

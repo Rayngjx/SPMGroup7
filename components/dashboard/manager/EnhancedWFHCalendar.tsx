@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -24,27 +23,19 @@ import {
   isSaturday,
   isSunday,
   isToday,
-  startOfDay,
-  isSameDay
+  startOfDay
 } from 'date-fns';
-import { DateSelectArg } from '@fullcalendar/core';
 
 interface Staff {
   id: number;
   name: string;
   position: string;
+  reportingManager: number;
   wfhDates: string[];
-  reporting_manager: string;
-  role_id: number;
 }
 
 interface TeamScheduleCalendarProps {
-  currentUser: {
-    staff_id: number;
-    staff_fname: string;
-    staff_lname: string;
-    role_id: number;
-  };
+  currentUser: Staff;
   departmentStaff: Staff[];
 }
 
@@ -63,35 +54,40 @@ export default function TeamScheduleCalendar({
   >('dayGridMonth');
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  const updateSelectedDateStaff = useCallback(
-    (date: Date) => {
-      if (!isValid(date)) {
-        return;
-      }
-      const dateString = format(date, 'yyyy-MM-dd');
-      if (isSaturday(date) || isSunday(date)) {
-        setSelectedDateStaff({ wfh: [], inOffice: [] });
-      } else {
-        const wfh = departmentStaff.filter((staff) =>
-          staff.wfhDates.some((wfhDate) => isSameDay(new Date(wfhDate), date))
-        );
-        const inOffice = departmentStaff.filter(
-          (staff) =>
-            !staff.wfhDates.some((wfhDate) =>
-              isSameDay(new Date(wfhDate), date)
-            )
-        );
-        setSelectedDateStaff({ wfh, inOffice });
-      }
-    },
-    [departmentStaff]
-  );
+  const updateSelectedDateStaff = (date: Date) => {
+    if (!isValid(date)) {
+      console.error('Invalid date:', date);
+      return;
+    }
+    const dateString = format(date, 'yyyy-MM-dd');
+    if (isSaturday(date) || isSunday(date)) {
+      setSelectedDateStaff({ wfh: [], inOffice: [] });
+      console.log('Updated staff for date:', dateString, {
+        wfh: [],
+        inOffice: []
+      });
+    } else {
+      const wfh = departmentStaff.filter((staff) =>
+        staff.wfhDates.some(
+          (wfhDate) =>
+            startOfDay(new Date(wfhDate)).getTime() ===
+            startOfDay(date).getTime()
+        )
+      );
+      const inOffice = departmentStaff.filter(
+        (staff) =>
+          !staff.wfhDates.some(
+            (wfhDate) =>
+              startOfDay(new Date(wfhDate)).getTime() ===
+              startOfDay(date).getTime()
+          )
+      );
+      setSelectedDateStaff({ wfh, inOffice });
+      console.log('Updated staff for date:', dateString, { wfh, inOffice });
+    }
+  };
 
-  useEffect(() => {
-    updateSelectedDateStaff(selectedDate);
-  }, [selectedDate, updateSelectedDateStaff]);
-
-  const handleDateSelect = (arg: { date: Date | string }) => {
+  const handleDateClick = (arg: { date: Date | string }) => {
     const newDate =
       arg.date instanceof Date ? arg.date : parseISO(arg.date as string);
     if (isValid(newDate)) {
@@ -146,9 +142,10 @@ export default function TeamScheduleCalendar({
       el.style.border = '2px solid #3B82F6'; // Blue border for today's date
     }
   };
+
   useEffect(() => {
     updateSelectedDateStaff(selectedDate);
-  }, [selectedDate, departmentStaff, updateSelectedDateStaff]);
+  }, [selectedDate, departmentStaff]);
 
   const calendarEvents = departmentStaff.flatMap((staff) =>
     staff.wfhDates
@@ -169,20 +166,19 @@ export default function TeamScheduleCalendar({
     return <div>Loading...</div>;
   }
 
-  // if (!session || currentUser.role_id !== 3) {
-  //   return (
-  //     <Card className="shadow-sm">
-  //       <CardHeader>
-  //         <CardTitle>Access Denied</CardTitle>
-  //       </CardHeader>
-  //       <CardContent>
-  //         <p>You do not have permission to view this page.</p>
-  //       </CardContent>
-  //     </Card>
-  //   );
-  // }
+  if (!session || session.user.role_id !== 3) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Access Denied</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>You do not have permission to view this page.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  // ... (rest of the return statement remains the same)
   return (
     <div className="grid grid-cols-3 gap-6">
       <Card className="col-span-2 shadow-sm">
@@ -222,7 +218,7 @@ export default function TeamScheduleCalendar({
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView={calendarView}
-              dateClick={handleDateSelect}
+              dateClick={handleDateClick}
               dayCellDidMount={dayCellDidMount}
               headerToolbar={{
                 left: 'prev,next',
@@ -231,9 +227,7 @@ export default function TeamScheduleCalendar({
               }}
               height="100%"
               selectable={true}
-              select={(arg: DateSelectArg) =>
-                handleDateSelect({ date: arg.start })
-              } // Updated to pass the correct structure
+              select={handleDateClick}
               events={calendarEvents}
               eventContent={(eventInfo) => {
                 return (

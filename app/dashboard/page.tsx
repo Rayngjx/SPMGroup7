@@ -6,18 +6,13 @@ import { db } from '@/lib/db';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// import WFHCalendar from '@/components/dashboard/overviewcalendar/overviewcalendar';
+import WFHCalendar from '@/components/dashboard/overviewcalendar/overviewcalendar';
 import { auth } from '@/auth';
 
 import CreateRequestForm from '@/components/forms/create-request/wfh-request';
 
 export default async function page() {
   const session = await auth();
-  // console.log('Session: ', session); // Debug the session object
-  // let getUsers;
-  if (!session) {
-    return <p>Please log in to view this page.</p>;
-  }
 
   if (session?.user?.staff_id) {
     const staffId = session.user.staff_id;
@@ -121,7 +116,9 @@ export default async function page() {
               <CreateRequestForm />
             </div>
           </TabsContent>
-          <TabsContent value="analytics" className="space-y-4"></TabsContent>
+          <TabsContent value="analytics" className="space-y-4">
+            <WFHCalendar></WFHCalendar>
+          </TabsContent>
         </Tabs>
       </div>
     </PageContainer>

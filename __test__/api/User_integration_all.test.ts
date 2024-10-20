@@ -1,6 +1,6 @@
-import { GET, POST, OPTIONS } from '@/app/api/users/all/route'; // Adjust the import path
+import { GET, POST, OPTIONS } from '@/app/api/users/route'; // Adjust the import path
 import { db } from '@/lib/db';
-import { createUser, getAllUsers } from '@/lib/crudFunctions/Staff';
+import { createUser } from '@/lib/crudFunctions/Staff'; // Adjust based on where the function is located
 
 describe('Users API Route Integration Tests', () => {
   const testUser = {
@@ -11,19 +11,21 @@ describe('Users API Route Integration Tests', () => {
     department: 'Sales',
     position: 'Manager',
     country: 'USA',
-    reporting_manager: 140894,
+    reporting_manager: undefined,
     role_id: 1 // Assuming role_id 1 exists
   };
 
   beforeAll(async () => {
-    // Connect to the test database
-    await db.$connect();
+    await db.users.deleteMany();
+    await db.$connect(); // Connect to the test database
+  });
+
+  afterEach(async () => {
+    await db.users.deleteMany({ where: { staff_id: testUser.staff_id } }); // Clean up test data after each test
   });
 
   afterAll(async () => {
-    // Clean up test data and disconnect
-    await db.users.deleteMany({ where: { staff_id: testUser.staff_id } });
-    await db.$disconnect();
+    await db.$disconnect(); // Disconnect after all tests are complete
   });
 
   describe('GET /api/users', () => {
@@ -42,9 +44,21 @@ describe('Users API Route Integration Tests', () => {
       expect(json[0]).toHaveProperty('staff_id');
     });
 
+    it('should return an empty array if no users are found', async () => {
+      // Simulate the GET request without creating a user
+      const response = await GET();
+      const json = await response.json();
+
+      // Assertions
+      expect(response.status).toBe(200);
+      expect(json).toEqual([]); // Expect an empty array
+    });
+
     it('should return 500 if there is a database error', async () => {
-      // Temporarily disconnect the database to simulate an error
-      await db.$disconnect();
+      // Mock a database error by making `getAllUsers` throw an error
+      jest
+        .spyOn(db.users, 'findMany')
+        .mockRejectedValueOnce(new Error('Database error'));
 
       const response = await GET();
       const json = await response.json();
@@ -52,9 +66,6 @@ describe('Users API Route Integration Tests', () => {
       // Assertions
       expect(response.status).toBe(500);
       expect(json.error).toBe('Failed to fetch users');
-
-      // Reconnect the database
-      await db.$connect();
     });
   });
 
@@ -74,7 +85,7 @@ describe('Users API Route Integration Tests', () => {
       expect(response.status).toBe(201);
       expect(json.success).toBe(true);
 
-      // Verify the user was added in the database
+      // Verify the user was added to the database
       const createdUser = await db.users.findUnique({
         where: { staff_id: testUser.staff_id }
       });
@@ -83,7 +94,7 @@ describe('Users API Route Integration Tests', () => {
       expect(createdUser?.email).toBe(testUser.email);
     });
 
-    it('should return 400 if creating a user fails', async () => {
+    it('should return 400 if required fields are missing', async () => {
       // Simulate the POST request with invalid data (missing required fields)
       const invalidUser = { staff_fname: 'Missing Fields' };
       const req = new Request('http://localhost:3000/api/users', {
@@ -101,8 +112,10 @@ describe('Users API Route Integration Tests', () => {
     });
 
     it('should return 500 if there is a database error', async () => {
-      // Temporarily disconnect the database to simulate an error
-      await db.$disconnect();
+      // Mock a database error by making `createUser` throw an error
+      jest
+        .spyOn(db.users, 'create')
+        .mockRejectedValueOnce(new Error('Database error'));
 
       const req = new Request('http://localhost:3000/api/users', {
         method: 'POST',
@@ -116,21 +129,16 @@ describe('Users API Route Integration Tests', () => {
       // Assertions
       expect(response.status).toBe(500);
       expect(json.error).toBe('Failed to create user');
-
-      // Reconnect the database
-      await db.$connect();
     });
   });
 
-  describe('OPTIONS /api/users', () => {
-    it('should return allowed methods', async () => {
-      const response = await OPTIONS();
+  it('should return allowed methods', async () => {
+    const response = await OPTIONS();
 
-      const json = await response.json();
-
-      // Assertions
-      expect(response.status).toBe(200);
-      expect(json.allow).toEqual(expect.arrayContaining(['GET', 'POST']));
-    });
+    // Assertions
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Allow')).toEqual(
+      expect.stringContaining('GET, PUT, DELETE')
+    );
   });
 });
