@@ -1,22 +1,13 @@
 'use client';
-
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { format, isWeekend } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { format, isWeekend, isBefore } from 'date-fns';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -24,243 +15,244 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { toast } from '@/components/ui/use-toast';
-import * as z from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const formSchema = z.object({
-  timeslot: z.string().nonempty('Timeslot is required'),
-  dates: z
-    .array(z.date())
-    .refine((dates) => dates.length > 0, 'At least one date is required')
-    .refine((dates) => dates.length <= 5, 'Maximum of 5 dates allowed')
-    .refine(
-      (dates) => dates.every((date) => !isWeekend(date)),
-      'Only weekdays are allowed'
-    ),
-  reason: z.string().nonempty('Reason is required'),
+const schema = z.object({
+  dates: z.array(z.date()).min(1).max(5),
+  timeslot: z.string().min(1, 'Time slot is required'),
+  reason: z.string().min(1, 'Reason is required'),
   document: z.instanceof(File).optional()
 });
 
-type RequestFormData = z.infer<typeof formSchema>;
+type FormData = z.infer<typeof schema>;
 
 export default function CreateRequestForm() {
   const { data: session } = useSession();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<RequestFormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      timeslot: '',
-      dates: [],
-      reason: '',
-      document: undefined
-    }
+  const [existingRequests, setExistingRequests] = useState<Date[]>([]);
+  const [monthlyRequestCount, setMonthlyRequestCount] = useState<
+    Record<string, number>
+  >({});
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch
+  } = useForm<FormData>({
+    resolver: zodResolver(schema)
   });
 
-  const onSubmit = async (data: RequestFormData) => {
-    setIsSubmitting(true);
+  const selectedDates = watch('dates');
+
+  useEffect(() => {
+    const fetchExistingRequests = async () => {
+      if (session?.user?.staff_id) {
+        try {
+          const response = await fetch(
+            `/api/requests?staffId=${session.user.staff_id}`
+          );
+          if (response.ok) {
+            const requests = await response.json();
+            const approvedDates = requests
+              .filter((r: any) =>
+                ['approved', 'pending', 'withdraw_pending'].includes(r.status)
+              )
+              .map((r: any) => new Date(r.date));
+            setExistingRequests(approvedDates);
+
+            const counts: Record<string, number> = {};
+            approvedDates.forEach((date: Date) => {
+              const monthKey = format(date, 'yyyy-MM');
+              counts[monthKey] = (counts[monthKey] || 0) + 1;
+            });
+            setMonthlyRequestCount(counts);
+          } else {
+            console.error(
+              'Failed to fetch existing requests:',
+              await response.text()
+            );
+          }
+        } catch (error) {
+          console.error('Error fetching existing requests:', error);
+        }
+      }
+    };
+    fetchExistingRequests();
+  }, [session]);
+
+  const onSubmit = async (data: FormData) => {
+    if (!session?.user?.staff_id || !session.user.reporting_manager) {
+      toast({
+        title: 'Error',
+        description:
+          'User session or reporting manager information not found. Please log in again.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     try {
-      let documentUrl = null;
-
-      // Only upload the document if form validation passes
+      let documentUrl = '';
       if (data.document) {
-        const fileFormData = new FormData();
-        fileFormData.append('document', data.document);
-
+        const formData = new FormData();
+        formData.append('document', data.document);
         const uploadResponse = await fetch('/api/documents', {
           method: 'POST',
-          body: fileFormData
+          body: formData
         });
-
         if (!uploadResponse.ok) {
-          const contentType = uploadResponse.headers.get('content-type');
-          if (contentType && contentType.indexOf('application/json') !== -1) {
-            const uploadErrorData = await uploadResponse.json();
-            throw new Error(uploadErrorData.error || 'Document upload failed');
-          } else {
-            const textError = await uploadResponse.text();
-            throw new Error(`Document upload failed: ${textError}`);
-          }
+          console.error('Document upload failed:', await uploadResponse.text());
+          throw new Error('Document upload failed');
         }
-
-        const uploadData = await uploadResponse.json();
-        documentUrl = uploadData.url;
+        const { url } = await uploadResponse.json();
+        documentUrl = url;
       }
 
-      // Submit the form data
-      const formDataPayload = {
-        staff_id: Number(session?.user?.staff_id),
+      const requests = data.dates.map((date) => ({
+        staff_id: session.user.staff_id,
         timeslot: data.timeslot,
-        dates: JSON.stringify(
-          data.dates.map((date) => format(date, 'yyyy-MM-dd'))
-        ),
+        date: format(date, 'yyyy-MM-dd'),
         reason: data.reason,
-        approved: 'Pending',
-        document_url: documentUrl
-      };
+        status: 'pending',
+        document_url: documentUrl,
+        processor_id: session.user.reporting_manager
+      }));
 
-      const response = await fetch(
-        `/api/requests/by-staff/${session?.user?.staff_id}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formDataPayload)
-        }
-      );
+      console.log('Submitting requests:', JSON.stringify(requests, null, 2));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit request');
+      const createResponse = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requests)
+      });
+
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        console.error('Failed to create requests:', errorText);
+        throw new Error(`Failed to create requests: ${errorText}`);
       }
+
+      const result = await createResponse.json();
+      console.log('Create requests result:', result);
 
       toast({
         title: 'Success',
-        description: 'Your WFH request has been submitted.'
+        description: `Successfully submitted ${requests.length} WFH request(s).`
       });
-
-      form.reset();
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error submitting form:', error);
       toast({
         title: 'Error',
         description:
           error instanceof Error
             ? error.message
-            : 'An error occurred while submitting the request',
+            : 'An error occurred while submitting your requests. Please try again.',
         variant: 'destructive'
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
+  const isDateDisabled = (date: Date) => {
+    return (
+      isWeekend(date) ||
+      isBefore(date, new Date()) ||
+      existingRequests.some(
+        (existingDate) =>
+          format(existingDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+      )
+    );
+  };
+
+  const showMonthlyLimitWarning = (dates: Date[]) => {
+    const monthsExceeding = dates.filter((date) => {
+      const monthKey = format(date, 'yyyy-MM');
+      return (monthlyRequestCount[monthKey] || 0) + 1 > 2;
+    });
+    return monthsExceeding.length > 0;
+  };
+
+  if (!session?.user?.staff_id) {
+    return (
+      <Alert>
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          User session not found. Please log in again.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="timeslot"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Timeslot</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a timeslot" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="AM">Morning</SelectItem>
-                  <SelectItem value="PM">Afternoon</SelectItem>
-                  <SelectItem value="Fullday">Full Day</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                Choose the time slot for your WFH request.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="dates"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Select Dates</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={'outline'}
-                      className={cn(
-                        'w-[300px] justify-start text-left font-normal',
-                        !field.value.length && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value.length > 0 ? (
-                        field.value
-                          .map((date) => format(date, 'MMM d, yyyy'))
-                          .join(', ')
-                      ) : (
-                        <span>Pick dates</span>
-                      )}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="multiple"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    numberOfMonths={2}
-                    disabled={(date) => isWeekend(date)}
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormDescription>
-                Select the dates for your WFH request (max 5 weekdays).
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="reason"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Reason</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Enter your reason for WFH"
-                  className="resize-none"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Provide a brief explanation for your WFH request.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="document"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Upload Document</FormLabel>
-              <FormControl>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.png,.jpg"
-                  onChange={(e) => field.onChange(e.target.files?.[0])}
-                />
-              </FormControl>
-              <FormDescription>
-                Attach a supporting document (optional).
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting...' : 'Submit Request'}
-        </Button>
-      </form>
-    </Form>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Controller
+        name="dates"
+        control={control}
+        render={({ field }) => (
+          <Calendar
+            mode="multiple"
+            selected={field.value}
+            onSelect={field.onChange}
+            disabled={isDateDisabled}
+            className="rounded-md border"
+          />
+        )}
+      />
+      {errors.dates && <p className="text-red-500">{errors.dates.message}</p>}
+
+      {selectedDates &&
+        selectedDates.length > 0 &&
+        showMonthlyLimitWarning(selectedDates) && (
+          <Alert>
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              You are submitting WFH requests for dates in a month where you
+              already have 2 confirmed WFH days.
+            </AlertDescription>
+          </Alert>
+        )}
+
+      <Controller
+        name="timeslot"
+        control={control}
+        render={({ field }) => (
+          <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select time slot" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="full_day">Full Day</SelectItem>
+              <SelectItem value="morning">Morning</SelectItem>
+              <SelectItem value="afternoon">Afternoon</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      />
+      {errors.timeslot && (
+        <p className="text-red-500">{errors.timeslot.message}</p>
+      )}
+
+      <Controller
+        name="reason"
+        control={control}
+        render={({ field }) => (
+          <Textarea {...field} placeholder="Reason for WFH request" />
+        )}
+      />
+      {errors.reason && <p className="text-red-500">{errors.reason.message}</p>}
+
+      <Controller
+        name="document"
+        control={control}
+        render={({ field }) => (
+          <Input
+            type="file"
+            onChange={(e) => field.onChange(e.target.files?.[0])}
+          />
+        )}
+      />
+
+      <Button type="submit">Submit Request</Button>
+    </form>
   );
 }
