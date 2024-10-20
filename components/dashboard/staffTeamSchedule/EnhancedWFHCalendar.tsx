@@ -169,18 +169,18 @@ export default function TeamScheduleCalendar({
     return <div>Loading...</div>;
   }
 
-  if (!session || currentUser.role_id !== 3) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>Access Denied</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>You do not have permission to view this page.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // if (!session || currentUser.role_id !== 3) {
+  //   return (
+  //     <Card className="shadow-sm">
+  //       <CardHeader>
+  //         <CardTitle>Access Denied</CardTitle>
+  //       </CardHeader>
+  //       <CardContent>
+  //         <p>You do not have permission to view this page.</p>
+  //       </CardContent>
+  //     </Card>
+  //   );
+  // }
 
   // ... (rest of the return statement remains the same)
   return (
