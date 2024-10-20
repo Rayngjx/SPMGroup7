@@ -11,15 +11,24 @@ import {
 } from '@/components/ui/select';
 import { useSession } from 'next-auth/react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface UnifiedRequest {
-  id: number;
-  type: 'WFH' | 'Withdraw';
-  dates: Date | Date[];
-  reason?: string;
-  timeslot?: string;
-  approved: string;
+  request_id: number;
+  staff_id: number;
+  timeslot: string | null;
+  date: Date;
+  reason: string | null;
+  status:
+    | 'approved'
+    | 'withdraw_pending'
+    | 'rejected'
+    | 'withdrawn'
+    | 'pending';
+  document_url: string | null;
+  created_at: Date | null;
+  last_updated: Date | null;
+  temp_replacement: number | null;
 }
 
 export default function RequestList() {
@@ -31,59 +40,43 @@ export default function RequestList() {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.staff_id) {
+      const fetchRequests = async (staffId: number) => {
+        try {
+          const response = await fetch(`/api/requests/?staff_id=${staffId}`);
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch requests');
+          }
+
+          const requestsData: UnifiedRequest[] = await response.json();
+
+          const pendingRequests = requestsData.filter(
+            (req) =>
+              req.status === 'pending' || req.status === 'withdraw_pending'
+          );
+
+          setPendingRequests(pendingRequests);
+          console.log(pendingRequests);
+        } catch (error) {
+          console.error('Error fetching requests:', error);
+        }
+      };
+
       fetchRequests(session.user.staff_id);
+
+      const pollInterval = setInterval(
+        () => fetchRequests(session.user.staff_id),
+        30000
+      );
+      return () => clearInterval(pollInterval);
     }
-  }, [session, status]);
-
-  const fetchRequests = async (staffId: number) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const [wfhResponse, withdrawResponse] = await Promise.all([
-        fetch(`/api/requests/by-staff/${staffId}`),
-        fetch(`/api/withdrawRequests/by-staff/${staffId}`)
-      ]);
-
-      if (!wfhResponse.ok || !withdrawResponse.ok) {
-        throw new Error('Failed to fetch requests');
-      }
-
-      const wfhData = await wfhResponse.json();
-      const withdrawData = await withdrawResponse.json();
-
-      const pendingWfh: UnifiedRequest[] = wfhData
-        .filter((req: any) => req.approved === 'Pending')
-        .map((req: any) => ({
-          id: req.request_id,
-          type: 'WFH',
-          dates: req.dates.map((date: string) => new Date(date)),
-          reason: req.reason,
-          timeslot: req.timeslot,
-          approved: req.approved
-        }));
-
-      const pendingWithdraw: UnifiedRequest[] = withdrawData
-        .filter((req: any) => req.approved === 'Pending')
-        .map((req: any) => ({
-          id: req.withdraw_request_id,
-          type: 'Withdraw',
-          dates: new Date(req.date),
-          reason: req.reason,
-          timeslot: req.timeslot,
-          approved: req.approved
-        }));
-
-      setPendingRequests([...pendingWfh, ...pendingWithdraw]);
-    } catch (error) {
-      console.error('Error fetching requests:', error);
-      setError('Failed to load requests. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  });
 
   const filteredRequests = pendingRequests.filter(
-    (req) => filter === 'All' || req.type === filter
+    (req) =>
+      filter === 'All' ||
+      (filter === 'WFH' && req.status === 'pending') ||
+      (filter === 'Withdraw' && req.status === 'withdraw_pending')
   );
 
   return (
@@ -107,56 +100,29 @@ export default function RequestList() {
         </Select>
       </CardHeader>
       <CardContent>
-        {isLoading && <p>Loading requests...</p>}
-        {error && <p className="text-red-500">{error}</p>}
-        {!isLoading && !error && (
-          <ScrollArea className="h-[400px] pr-4">
-            {filteredRequests.map((request) => (
-              <RequestItem
-                key={`${request.type}-${request.id}`}
-                request={request}
-              />
-            ))}
-          </ScrollArea>
-        )}
+        <ScrollArea className="h-[600px]">
+          {filteredRequests.map((request) => (
+            <RequestItem
+              key={`${request.status}-${request.request_id}`}
+              request={request}
+            />
+          ))}
+        </ScrollArea>
       </CardContent>
     </Card>
   );
 }
 
 function RequestItem({ request }: { request: UnifiedRequest }) {
-  const getBgColor = (type: 'WFH' | 'Withdraw') => {
-    return type === 'WFH' ? 'bg-orange-100' : 'bg-gray-100';
-  };
-
-  const getTextColor = (type: 'WFH' | 'Withdraw') => {
-    return type === 'WFH' ? 'text-orange-800' : 'text-gray-800';
-  };
-
-  const formatDate = (date: Date) => {
-    return format(date, 'd MMM');
-  };
-
   return (
-    <div className={`mb-4 rounded-lg p-4 ${getBgColor(request.type)}`}>
-      <h3 className={`font-bold ${getTextColor(request.type)}`}>
-        {request.type} Request
+    <div className="mb-4 rounded border p-4">
+      <h3 className="font-bold">
+        {request.status === 'withdraw_pending' ? 'Withdraw' : 'WFH'} Request
       </h3>
-      <p className="text-sm text-gray-600">
-        Date(s):{' '}
-        {Array.isArray(request.dates)
-          ? request.dates.map(formatDate).join(', ')
-          : formatDate(request.dates)}
-      </p>
-      {request.timeslot && (
-        <p className="text-sm text-gray-600">Timeslot: {request.timeslot}</p>
-      )}
-      {request.reason && (
-        <p className="text-sm text-gray-600">Reason: {request.reason}</p>
-      )}
-      <p className="mt-2 text-sm font-semibold text-yellow-600">
-        Status: {request.approved}
-      </p>
+      <p>Date: {format(parseISO(request.date.toString()), 'MMM d, yyyy')}</p>
+      {request.timeslot && <p>Timeslot: {request.timeslot}</p>}
+      {request.reason && <p>Reason: {request.reason}</p>}
+      <p>Status: {request.status}</p>
     </div>
   );
 }
