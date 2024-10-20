@@ -51,12 +51,22 @@ export async function PUT(request: Request) {
   // Start a transaction
   const result = await prisma.$transaction(async (prisma) => {
     // Fetch the current request
-    const currentRequest = await prisma.requests.findUnique({
+    let currentRequest = await prisma.requests.findUnique({
       where: { request_id: parseInt(request_id) }
     });
 
     if (!currentRequest) {
       throw new Error('Request not found');
+    }
+
+    // Jon added: to overwrite status if the request is already approved
+    const { searchParams } = new URL(request.url);
+    const reportingManager = searchParams.get('reportingManager');
+
+    if (reportingManager) {
+      if (currentRequest.status === 'approved' && status === 'withdrawn') {
+        currentRequest.status = 'withdraw_pending';
+      }
     }
 
     // Determine the log action based on current and new status

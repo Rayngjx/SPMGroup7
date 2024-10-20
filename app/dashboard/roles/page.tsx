@@ -1,7 +1,12 @@
+import {
+  checkIfSeniorManagementOrHR,
+  checkIfStaff
+} from '@/app/helper/userService';
 import { auth } from '@/auth';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import Component_Roles from '@/components/dashboard/roles/RolesPannel';
 import PageContainer from '@/components/layout/page-container';
+import { is } from 'date-fns/locale';
 import React from 'react';
 
 const breadcrumbItems = [
@@ -20,8 +25,14 @@ export default async function page() {
 
   const session = await auth();
 
-  const data = await fetch('http://localhost:3000/api/roles/all');
+  const data = await fetch('http://localhost:3000/api/roles');
   const roles = await data.json();
+
+  let isSeniorOrHR = false;
+
+  if (session) {
+    isSeniorOrHR = await checkIfSeniorManagementOrHR(session.user.staff_id);
+  }
 
   //   getUsers = getUsers ?? []; // Provide a default value if getUsers is undefined
 
@@ -29,7 +40,7 @@ export default async function page() {
     <PageContainer>
       {
         // This is a conditional rendering of the page title
-        session?.user?.role_id === 2 ? (
+        isSeniorOrHR ? (
           <>
             <h1 className="text-3xl font-semibold">Roles</h1>
             <div className="space-y-2">
@@ -41,7 +52,7 @@ export default async function page() {
         ) : (
           <>
             <h1 className="text-3xl font-semibold">Staff Dashboard</h1>
-            <p>Access Denied</p>
+            <p>Access Denied. Ask HR or sr mgr</p>
           </>
         )
       }
