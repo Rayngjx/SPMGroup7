@@ -8,7 +8,6 @@ export async function GET(request: Request) {
   const staff_id = searchParams.get('staff_id');
   const department = searchParams.get('department');
   const reportingManager = searchParams.get('reportingManager');
-  const staff_id = searchParams.get('staff_id');
 
   let users;
 
