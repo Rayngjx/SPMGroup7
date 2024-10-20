@@ -23,9 +23,7 @@ const TeamScheduleCalendar = dynamic(
 );
 
 async function getApprovedRequests(teamLeadId: number) {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/requests/?reportingManager=${teamLeadId}`
-  );
+  const response = await fetch(`/api/requests/?reportingManager=${teamLeadId}`);
   if (!response.ok) {
     throw new Error('Failed to fetch approved requests');
   }
@@ -39,9 +37,7 @@ async function getApprovedRequests(teamLeadId: number) {
 }
 
 async function getUserDetails(staffId: number) {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/?staffId=${staffId}`
-  );
+  const response = await fetch(`/api/users/?staffId=${staffId}`);
   if (!response.ok) {
     throw new Error('Failed to fetch user details');
   }
@@ -67,9 +63,9 @@ export default function TeamSchedulePage() {
       try {
         // Fetch approved requests for the current user's team
         const approvedRequests = await getApprovedRequests(
-          session.user.staff_id
+          session.user.reporting_manager
         );
-
+        console.log(approvedRequests);
         // Collect unique staff IDs from approved requests
         const staffIds: number[] = Array.from(
           new Set(approvedRequests.map((request: requests) => request.staff_id))
