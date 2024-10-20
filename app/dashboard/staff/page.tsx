@@ -28,7 +28,7 @@ export default async function page() {
     <PageContainer>
       {
         // This is a conditional rendering of the page title
-        session?.user?.role_id === 3 ? (
+        session?.user?.role_id === 1 ? (
           <>
             <h1 className="text-3xl font-semibold">View Staff Dashboard</h1>
             <div className="space-y-2">

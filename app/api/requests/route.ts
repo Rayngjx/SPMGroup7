@@ -32,7 +32,35 @@ export async function GET(request: Request) {
       where: { staff_id: { in: staffIds.map((user) => user.staff_id) } }
     });
   } else {
-    requests = await prisma.requests.findMany();
+    requests = await prisma.requests.findMany({
+      select: {
+        staff_id: true
+      }
+    });
+    //
+    requests = await prisma.requests.findMany({
+      select: {
+        staff_id: true,
+        request_id: true,
+        date: true,
+        timeslot: true,
+        reason: true,
+        status: true,
+        document_url: true,
+        created_at: true,
+        last_updated: true,
+        // temp_replacement: true,
+        users: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true,
+            email: true
+          }
+        }
+      }
+    });
   }
 
   return NextResponse.json(requests);
@@ -51,12 +79,22 @@ export async function PUT(request: Request) {
   // Start a transaction
   const result = await prisma.$transaction(async (prisma) => {
     // Fetch the current request
-    const currentRequest = await prisma.requests.findUnique({
+    let currentRequest = await prisma.requests.findUnique({
       where: { request_id: parseInt(request_id) }
     });
 
     if (!currentRequest) {
       throw new Error('Request not found');
+    }
+
+    // Jon added: to overwrite status if the request is already approved
+    const { searchParams } = new URL(request.url);
+    const reportingManager = searchParams.get('reportingManager');
+
+    if (reportingManager) {
+      if (currentRequest.status === 'approved' && status === 'withdrawn') {
+        currentRequest.status = 'withdraw_pending';
+      }
     }
 
     // Determine the log action based on current and new status

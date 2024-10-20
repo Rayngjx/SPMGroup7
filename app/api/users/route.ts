@@ -8,6 +8,7 @@ export async function GET(request: Request) {
   const staffId = searchParams.get('staffId');
   const department = searchParams.get('department');
   const reportingManager = searchParams.get('reportingManager');
+  const staff_id = searchParams.get('staff_id');
 
   let users;
 
@@ -17,9 +18,11 @@ export async function GET(request: Request) {
     users = await prisma.users.findMany({
       where: { reporting_manager: parseInt(reportingManager) }
     });
-  } else if (staffId) {
+
+  } else if (staff_id) {
     users = await prisma.users.findUnique({
-      where: { staff_id: parseInt(staffId) }
+      where: { staff_id: parseInt(staff_id) }
+
     });
   } else {
     users = await prisma.users.findMany();

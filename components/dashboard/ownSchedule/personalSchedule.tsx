@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -13,6 +14,14 @@ import {
 } from '@/components/ui/tooltip';
 import { useSession } from 'next-auth/react';
 import { format, isWeekend, parseISO } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CalendarEvent {
   id: string;
@@ -20,16 +29,27 @@ interface CalendarEvent {
   start: Date;
   end: Date;
   extendedProps: {
-    status: 'WFH' | 'PendingWFH' | 'PendingWithdraw';
+    status:
+      | 'approved'
+      | 'pending'
+      | 'withdrawn'
+      | 'rejected'
+      | 'withdraw_pending'
+      | 'cancelled';
     reason?: string;
+    timeslot?: string;
   };
 }
 
 export default function PersonalSchedule() {
   const { data: session, status } = useSession();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<
+    'all' | 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'cancelled'
+  >('all');
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.staff_id) {
@@ -37,42 +57,23 @@ export default function PersonalSchedule() {
     }
   }, [session, status]);
 
+  useEffect(() => {
+    filterEvents();
+  }, [events, filter]);
+
   const fetchCalendarData = async (staffId: number) => {
     setIsLoading(true);
     setError(null);
     try {
-      const [
-        approvedResponse,
-        withdrawnDatesResponse,
-        withdrawRequestsResponse,
-        wfhRequestsResponse
-      ] = await Promise.all([
-        fetch(`/api/approved-dates/${staffId}`),
-        fetch(`/api/withdrawn-dates?staffId=${staffId}`),
-        fetch(`/api/withdrawRequests/by-staff/${staffId}`),
-        fetch(`/api/requests/by-staff/${staffId}`)
-      ]);
+      const response = await fetch(`/api/requests?staffId=${staffId}`);
 
-      if (
-        !approvedResponse.ok ||
-        !withdrawnDatesResponse.ok ||
-        !withdrawRequestsResponse.ok ||
-        !wfhRequestsResponse.ok
-      ) {
+      if (!response.ok) {
         throw new Error('Failed to fetch calendar data');
       }
 
-      const approvedDates = await approvedResponse.json();
-      const withdrawnDates = await withdrawnDatesResponse.json();
-      const withdrawRequests = await withdrawRequestsResponse.json();
-      const wfhRequests = await wfhRequestsResponse.json();
-
-      const calendarEvents = processCalendarData(
-        approvedDates,
-        withdrawnDates,
-        withdrawRequests,
-        wfhRequests
-      );
+      const requests = await response.json();
+      console.log('API Response:', requests);
+      const calendarEvents = processCalendarData(requests);
       setEvents(calendarEvents);
     } catch (error) {
       console.error('Error fetching calendar data:', error);
@@ -82,99 +83,57 @@ export default function PersonalSchedule() {
     }
   };
 
-  const processCalendarData = (
-    approvedDates: any[],
-    withdrawnDates: any[],
-    withdrawRequests: any[],
-    wfhRequests: any[]
-  ): CalendarEvent[] => {
-    const dateMap = new Map<string, { approved: number; withdrawn: number }>();
-    const events: CalendarEvent[] = [];
-
-    // Process approved and withdrawn dates
-    approvedDates.forEach((item: any) => {
-      const date = format(new Date(item.date), 'yyyy-MM-dd');
-      dateMap.set(date, {
-        approved: (dateMap.get(date)?.approved || 0) + 1,
-        withdrawn: dateMap.get(date)?.withdrawn || 0
-      });
-    });
-
-    withdrawnDates.forEach((item: any) => {
-      const date = format(new Date(item.date), 'yyyy-MM-dd');
-      dateMap.set(date, {
-        approved: dateMap.get(date)?.approved || 0,
-        withdrawn: (dateMap.get(date)?.withdrawn || 0) + 1
-      });
-    });
-
-    // Create WFH events
-    dateMap.forEach((value, date) => {
-      if (value.approved - value.withdrawn === 1) {
-        events.push({
-          id: `wfh-${date}`,
-          title: 'WFH',
-          start: new Date(date),
-          end: new Date(date),
-          extendedProps: {
-            status: 'WFH'
-          }
-        });
+  const processCalendarData = (requests: any[]): CalendarEvent[] => {
+    const calendarEvents = requests.map((request: any) => ({
+      id: `request-${request.request_id}`,
+      title: getEventTitle(request.status),
+      start: new Date(request.date),
+      end: new Date(request.date),
+      extendedProps: {
+        status: request.status,
+        reason: request.reason,
+        timeslot: request.timeslot
       }
-    });
+    }));
+    console.log('Processed Calendar Events:', calendarEvents);
+    return calendarEvents;
+  };
 
-    // Process pending WFH requests
-    wfhRequests.forEach((request: any) => {
-      if (request.approved === 'Pending' && Array.isArray(request.dates)) {
-        request.dates.forEach((date: string) => {
-          const formattedDate = format(new Date(date), 'yyyy-MM-dd');
-          if (
-            !dateMap.has(formattedDate) ||
-            dateMap.get(formattedDate)!.approved -
-              dateMap.get(formattedDate)!.withdrawn ===
-              0
-          ) {
-            events.push({
-              id: `pending-wfh-${request.request_id}-${formattedDate}`,
-              title: 'Pending WFH',
-              start: new Date(date),
-              end: new Date(date),
-              extendedProps: {
-                status: 'PendingWFH',
-                reason: request.reason
-              }
-            });
-          }
-        });
-      }
-    });
+  const getEventTitle = (status: string): string => {
+    switch (status) {
+      case 'approved':
+        return 'WFH';
+      case 'pending':
+      case 'withdraw_pending':
+        return 'Pending';
+      case 'withdrawn':
+        return 'Withdrawn';
+      case 'rejected':
+        return 'Rejected';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return 'Unknown';
+    }
+  };
 
-    // Process pending withdraw requests
-    withdrawRequests.forEach((request: any) => {
-      if (request.approved === 'Pending') {
-        const date = format(new Date(request.date), 'yyyy-MM-dd');
-        // Replace WFH event with Withdraw Request if it exists
-        const index = events.findIndex(
-          (e) =>
-            format(e.start, 'yyyy-MM-dd') === date &&
-            e.extendedProps.status === 'WFH'
-        );
-        if (index !== -1) {
-          events[index] = {
-            id: `withdraw-${request.withdraw_request_id}`,
-            title: 'Pending Withdraw',
-            start: new Date(request.date),
-            end: new Date(request.date),
-            extendedProps: {
-              status: 'PendingWithdraw',
-              reason: request.reason
-            }
-          };
-        }
-      }
-    });
-    console.log(events);
-    return events;
+  const filterEvents = () => {
+    let filtered;
+    if (filter === 'all') {
+      filtered = events;
+    } else if (filter === 'pending') {
+      filtered = events.filter(
+        (event) =>
+          event.extendedProps.status === 'pending' ||
+          event.extendedProps.status === 'withdraw_pending'
+      );
+    } else {
+      filtered = events.filter(
+        (event) => event.extendedProps.status === filter
+      );
+    }
+    console.log('Filtered Events:', filtered);
+    setFilteredEvents(filtered);
   };
 
   const renderEventContent = (eventInfo: any) => {
@@ -184,18 +143,26 @@ export default function PersonalSchedule() {
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger
-            className={`h-full w-full ${color} rounded p-1 text-white`}
-          >
-            {event.title}
+          <TooltipTrigger asChild>
+            <div
+              className={`h-full w-full ${color} cursor-pointer overflow-hidden rounded p-1 text-xs text-white`}
+            >
+              {event.title}
+            </div>
           </TooltipTrigger>
           <TooltipContent>
             <p>
               <strong>Date:</strong> {format(event.start, 'MMM d, yyyy')}
             </p>
             <p>
-              <strong>Status:</strong> {event.extendedProps.status}
+              <strong>Status:</strong>{' '}
+              {getDisplayStatus(event.extendedProps.status)}
             </p>
+            {event.extendedProps.timeslot && (
+              <p>
+                <strong>Timeslot:</strong> {event.extendedProps.timeslot}
+              </p>
+            )}
             {event.extendedProps.reason && (
               <p>
                 <strong>Reason:</strong> {event.extendedProps.reason}
@@ -207,45 +174,121 @@ export default function PersonalSchedule() {
     );
   };
 
-  const getEventColor = (status: CalendarEvent['extendedProps']['status']) => {
+  const getEventColor = (status: string) => {
     switch (status) {
-      case 'WFH':
-        return 'bg-blue-600';
-      case 'PendingWFH':
-        return 'bg-blue-300';
-      case 'PendingWithdraw':
+      case 'approved':
+        return 'bg-green-600';
+      case 'pending':
+      case 'withdraw_pending':
+        return 'bg-yellow-600';
+      case 'withdrawn':
         return 'bg-gray-600';
+      case 'rejected':
+        return 'bg-red-600';
+      case 'cancelled':
+        return 'bg-purple-600';
       default:
-        return '';
+        return 'bg-gray-400';
     }
   };
 
+  const getDisplayStatus = (status: string): string => {
+    return status === 'withdraw_pending'
+      ? 'Pending'
+      : status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Work From Home Schedule</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading && <p>Loading calendar data...</p>}
-        {error && <p className="text-red-500">{error}</p>}
-        {!isLoading && !error && (
-          <FullCalendar
-            plugins={[dayGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            events={events}
-            eventContent={renderEventContent}
-            dayCellClassNames={(arg) =>
-              isWeekend(arg.date) ? 'bg-gray-100' : ''
-            }
-            dayCellDidMount={(arg) => {
-              if (isWeekend(arg.date)) {
-                arg.el.style.backgroundColor = '#f3f4f6';
-                arg.el.style.pointerEvents = 'none';
+    <div className="grid gap-4 md:grid-cols-3">
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle>Work From Home Schedule</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading && <p>Loading calendar data...</p>}
+          {error && <p className="text-red-500">{error}</p>}
+          {!isLoading && !error && (
+            <FullCalendar
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView="dayGridMonth"
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+              }}
+              events={events}
+              eventContent={renderEventContent}
+              dayCellClassNames={(arg) =>
+                isWeekend(arg.date) ? 'bg-gray-100' : ''
               }
-            }}
-          />
-        )}
-      </CardContent>
-    </Card>
+              dayCellDidMount={(arg) => {
+                if (isWeekend(arg.date)) {
+                  arg.el.style.backgroundColor = '#f3f4f6';
+                  arg.el.style.pointerEvents = 'none';
+                }
+              }}
+            />
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>WFH Requests</CardTitle>
+          <Select
+            value={filter}
+            onValueChange={(value: any) => setFilter(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Filter requests" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Requests</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="withdrawn">Withdrawn</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[600px]">
+            {filteredEvents.length === 0 ? (
+              <p>No requests found.</p>
+            ) : (
+              <ul className="space-y-4">
+                {filteredEvents.map((event) => (
+                  <li key={event.id} className="rounded border p-4">
+                    <h3 className="font-bold">{event.title}</h3>
+                    <p>Date: {format(event.start, 'MMMM d, yyyy')}</p>
+                    {event.extendedProps.timeslot && (
+                      <p>Timeslot: {event.extendedProps.timeslot}</p>
+                    )}
+                    {event.extendedProps.reason && (
+                      <p>Reason: {event.extendedProps.reason}</p>
+                    )}
+                    <p
+                      className={`font-semibold ${
+                        event.extendedProps.status === 'approved'
+                          ? 'text-green-600'
+                          : event.extendedProps.status === 'rejected'
+                          ? 'text-red-600'
+                          : event.extendedProps.status === 'withdrawn'
+                          ? 'text-gray-600'
+                          : event.extendedProps.status === 'cancelled'
+                          ? 'text-purple-600'
+                          : 'text-yellow-600'
+                      }`}
+                    >
+                      Status: {getDisplayStatus(event.extendedProps.status)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
