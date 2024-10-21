@@ -53,10 +53,34 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('document') as File;
-
+    console.log('File:', file);
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
+
+    // Add file size check
+    if (file.size > 5 * 1024 * 1024) {
+      // 5MB limit
+      return NextResponse.json(
+        { error: 'File size exceeds 5MB limit' },
+        { status: 400 }
+      );
+    }
+
+    // Add file type check
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Invalid file type. Only PDF, JPEG, and PNG are allowed' },
+        { status: 400 }
+      );
+    }
+
+    console.log('File details:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    });
 
     const filename = `${Date.now()}_${file.name}`;
     const { data, error } = await supabase.storage
@@ -68,7 +92,10 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('Supabase upload error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'File upload failed' },
+        { status: 500 }
+      );
     }
 
     // Get public URL of the uploaded file
@@ -77,6 +104,7 @@ export async function POST(request: Request) {
       .getPublicUrl(filename);
 
     if (urlError || !publicUrlData?.publicUrl) {
+      console.error('Error getting public URL:', urlError);
       return NextResponse.json(
         { error: 'Could not get public URL' },
         { status: 500 }
@@ -85,10 +113,20 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: publicUrlData.publicUrl });
   } catch (err) {
-    console.error('Unexpected error:', err);
+    console.error('Unexpected error in document upload:', err);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
+}
+
+export async function OPTIONS() {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization'
+  };
+
+  return new NextResponse(null, { headers });
 }

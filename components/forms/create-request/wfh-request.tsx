@@ -19,11 +19,36 @@ import { Calendar } from '@/components/ui/calendar';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_FILE_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+];
+
+const ACCEPTED_FILE_EXTENSIONS = [
+  '.pdf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.doc',
+  '.docx'
+];
+
 const schema = z.object({
   dates: z.array(z.date()).min(1).max(5),
   timeslot: z.string().min(1, 'Time slot is required'),
   reason: z.string().min(1, 'Reason is required'),
-  document: z.instanceof(File).optional()
+  document: z
+    .custom<File>((file) => file instanceof File, 'Please upload a file')
+    .refine((file) => file?.size <= MAX_FILE_SIZE, 'Max file size is 5MB.')
+    .refine(
+      (file) => ACCEPTED_FILE_TYPES.includes(file?.type),
+      'Only .pdf, .jpeg and .png files are accepted.'
+    )
+    .optional()
 });
 
 type FormData = z.infer<typeof schema>;
@@ -97,13 +122,15 @@ export default function CreateRequestForm() {
       if (data.document) {
         const formData = new FormData();
         formData.append('document', data.document);
+        console.log(formData);
         const uploadResponse = await fetch('/api/documents', {
           method: 'POST',
           body: formData
         });
         if (!uploadResponse.ok) {
-          console.error('Document upload failed:', await uploadResponse.text());
-          throw new Error('Document upload failed');
+          const errorText = await uploadResponse.text();
+          console.error('Document upload failed:', errorText);
+          throw new Error(`Document upload failed: ${errorText}`);
         }
         const { url } = await uploadResponse.json();
         documentUrl = url;
@@ -147,7 +174,7 @@ export default function CreateRequestForm() {
         description:
           error instanceof Error
             ? error.message
-            : 'An error occurred while submitting your requests. Please try again.',
+            : 'An error occurred while submitting your request.',
         variant: 'destructive'
       });
     }
@@ -245,10 +272,19 @@ export default function CreateRequestForm() {
         name="document"
         control={control}
         render={({ field }) => (
-          <Input
-            type="file"
-            onChange={(e) => field.onChange(e.target.files?.[0])}
-          />
+          <div>
+            <Input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                field.onChange(file);
+              }}
+              accept={ACCEPTED_FILE_TYPES.join(',')}
+            />
+            {errors.document && (
+              <p className="text-red-500">{errors.document.message}</p>
+            )}
+          </div>
         )}
       />
 

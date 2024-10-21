@@ -52,11 +52,18 @@ export default function RequestLogThread() {
   const router = useRouter();
   const [logs, setLogs] = useState<Log[]>([]);
   const [request, setRequest] = useState<Request | null>(null);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLogs();
     fetchRequest();
   }, [requestId]);
+
+  useEffect(() => {
+    if (request && request.document_url) {
+      fetchDocumentUrl();
+    }
+  }, [request]);
 
   const fetchLogs = async () => {
     const response = await fetch(`/api/logs?requestId=${requestId}`);
@@ -68,6 +75,17 @@ export default function RequestLogThread() {
     const response = await fetch(`/api/requests?requestId=${requestId}`);
     const data = await response.json();
     setRequest(data);
+  };
+
+  const fetchDocumentUrl = async () => {
+    const response = await fetch(`/api/documents?requestId=${requestId}`);
+    if (response.ok) {
+      const data = await response.json();
+      setDocumentUrl(data.url);
+    } else {
+      console.error('Failed to fetch document URL');
+      setDocumentUrl(null);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -135,22 +153,22 @@ export default function RequestLogThread() {
                     {format(parseISO(request.date), 'MMM d, yyyy')}
                   </p>
                   <p>
-                    <strong>Reason:</strong> {request.reason}
+                    <strong>Timeslot:</strong> {request.timeslot}
                   </p>
                 </div>
                 <div>
                   <p>
-                    <strong>Timeslot:</strong> {request.timeslot}
+                    <strong>Reason:</strong> {request.reason}
                   </p>
                   <p>
                     <strong>Created At:</strong>{' '}
                     {formatDate(request.created_at)}
                   </p>
-                  {request.document_url && (
+                  {documentUrl && (
                     <p>
                       <strong>Document:</strong>{' '}
                       <Link
-                        href={request.document_url}
+                        href={documentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-500 hover:underline"
