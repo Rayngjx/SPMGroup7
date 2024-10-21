@@ -18,8 +18,8 @@ export const navItems: RoleBasedNavItem[] = [
   {
     title: 'Staff',
     href: '/dashboard/staff',
-    icon: 'user',
-    label: 'user',
+    icon: 'contact2',
+    label: 'Staff',
     allowedRoles: [1, 3]
   },
   {
@@ -32,7 +32,7 @@ export const navItems: RoleBasedNavItem[] = [
   {
     title: 'Team',
     href: '/dashboard/teamschedule',
-    icon: 'laptop',
+    icon: 'users',
     label: 'TeamSchedule',
     allowedRoles: [1, 2, 3]
   },
@@ -42,6 +42,13 @@ export const navItems: RoleBasedNavItem[] = [
     icon: 'laptop',
     label: 'ManagerTeamSchedule',
     allowedRoles: [1, 3]
+  },
+  {
+    title: 'Logs',
+    href: '/dashboard/logs',
+    icon: 'clipboardlist',
+    label: 'logs',
+    allowedRoles: [1]
   },
   {
     title: 'Logout',

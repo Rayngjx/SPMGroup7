@@ -21,10 +21,26 @@ export async function GET(request: Request) {
   const staffId = searchParams.get('staffId');
   const reportingManager = searchParams.get('reportingManager');
   const department = searchParams.get('department');
+  const requestId = searchParams.get('requestId');
 
   let requests;
-
-  if (staffId) {
+  if (requestId) {
+    const specificRequest = await prisma.requests.findUnique({
+      where: { request_id: parseInt(requestId) },
+      include: {
+        users: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true,
+            email: true
+          }
+        }
+      }
+    });
+    return NextResponse.json(specificRequest);
+  } else if (staffId) {
     requests = await prisma.requests.findMany({
       where: { staff_id: parseInt(staffId) }
     });
