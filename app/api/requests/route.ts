@@ -62,7 +62,7 @@ export async function GET(request: Request) {
         document_url: true,
         created_at: true,
         last_updated: true,
-        // temp_replacement: true,
+        processor_id: true,
         users: {
           select: {
             staff_fname: true,
@@ -160,10 +160,11 @@ export async function PUT(request: Request) {
       currentRequest.status === 'withdraw_pending' &&
       status === 'withdrawn'
     ) {
-      logAction = 'withdraw';
+      logAction = 'withdraw_approve';
     } else if (status === 'cancelled') {
       logAction = 'cancel';
-      // Processor ID is set to staff ID when cancelled
+    } else if (status === 'withdraw_pending') {
+      logAction = 'withdraw';
     } else {
       throw new Error('Invalid status transition');
     }

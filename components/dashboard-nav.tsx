@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from './ui/tooltip';
+import { useSession } from 'next-auth/react';
 
 interface DashboardNavProps {
   items: NavItem[];

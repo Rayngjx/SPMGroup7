@@ -221,9 +221,9 @@ export default function CreateRequestForm() {
               <SelectValue placeholder="Select time slot" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="full_day">Full Day</SelectItem>
-              <SelectItem value="morning">Morning</SelectItem>
-              <SelectItem value="afternoon">Afternoon</SelectItem>
+              <SelectItem value="Full Day">Full Day</SelectItem>
+              <SelectItem value="AM">Morning</SelectItem>
+              <SelectItem value="PM">Afternoon</SelectItem>
             </SelectContent>
           </Select>
         )}

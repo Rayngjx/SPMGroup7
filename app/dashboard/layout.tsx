@@ -5,8 +5,8 @@ import type { Metadata } from 'next';
 import { auth } from '@/auth';
 
 export const metadata: Metadata = {
-  title: 'Next Shadcn Dashboard Starter',
-  description: 'Basic dashboard with Next.js and Shadcn'
+  title: 'WFH',
+  description: 'Your Personal WFH Schedule'
 };
 
 export default async function DashboardLayout({

@@ -1,11 +1,13 @@
 'use client';
-import React, { useState } from 'react';
+
+import React from 'react';
 import { DashboardNav } from '@/components/dashboard-nav';
-import { navItems } from '@/constants/data';
+import { getAuthorizedNavItems, UserRole } from '@/constants/data';
 import { cn } from '@/lib/utils';
 import { ChevronLeft } from 'lucide-react';
 import { useSidebar } from '@/hooks/useSidebar';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react'; // Assuming you're using NextAuth
 
 type SidebarProps = {
   className?: string;
@@ -13,6 +15,9 @@ type SidebarProps = {
 
 export default function Sidebar({ className }: SidebarProps) {
   const { isMinimized, toggle } = useSidebar();
+  const { data: session } = useSession();
+  const userRole = session?.user?.role_id as UserRole;
+  const authorizedNavItems = getAuthorizedNavItems(userRole);
 
   const handleToggle = () => {
     toggle();
@@ -21,7 +26,7 @@ export default function Sidebar({ className }: SidebarProps) {
   return (
     <aside
       className={cn(
-        `relative  hidden h-screen flex-none border-r bg-card transition-[width] duration-500 md:block`,
+        `relative hidden h-screen flex-none border-r bg-card transition-[width] duration-500 md:block`,
         !isMinimized ? 'w-72' : 'w-[72px]',
         className
       )}
@@ -44,7 +49,7 @@ export default function Sidebar({ className }: SidebarProps) {
       </div>
       <ChevronLeft
         className={cn(
-          'absolute -right-3 top-10 z-50  cursor-pointer rounded-full border bg-background text-3xl text-foreground',
+          'absolute -right-3 top-10 z-50 cursor-pointer rounded-full border bg-background text-3xl text-foreground',
           isMinimized && 'rotate-180'
         )}
         onClick={handleToggle}
@@ -52,7 +57,7 @@ export default function Sidebar({ className }: SidebarProps) {
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <div className="mt-3 space-y-1">
-            <DashboardNav items={navItems} />
+            <DashboardNav items={authorizedNavItems} />
           </div>
         </div>
       </div>
