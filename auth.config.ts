@@ -46,6 +46,7 @@ export const authConfig = {
         token.staff_lname = user.staff_lname;
         token.role_id = user.role_id;
         token.reporting_manager = user.reporting_manager;
+        token.department = user.department;
       }
       return token;
     },
@@ -61,6 +62,7 @@ export const authConfig = {
         session.user.staff_lname = token.staff_lname as string;
         session.user.role_id = token.role_id as number;
         session.user.reporting_manager = token.reporting_manager as number;
+        session.user.department = token.department as string;
       }
 
       // console.log('Session after modification:', session); // Debug session after assignment
