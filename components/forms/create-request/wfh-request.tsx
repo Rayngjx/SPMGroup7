@@ -18,6 +18,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { supabase } from '@/lib/supabase';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_FILE_TYPES = [
@@ -36,6 +37,14 @@ const ACCEPTED_FILE_EXTENSIONS = [
   '.doc',
   '.docx'
 ];
+
+type UploadResponse = {
+  url: string;
+};
+
+type ErrorResponse = {
+  error: string;
+};
 
 const schema = z.object({
   dates: z.array(z.date()).min(1).max(5),
@@ -116,24 +125,31 @@ export default function CreateRequestForm() {
       });
       return;
     }
+    console.log(supabase);
 
     try {
       let documentUrl = '';
+
       if (data.document) {
         const formData = new FormData();
         formData.append('document', data.document);
-        console.log(formData);
+
         const uploadResponse = await fetch('/api/documents', {
           method: 'POST',
           body: formData
         });
+
         if (!uploadResponse.ok) {
-          const errorText = await uploadResponse.text();
-          console.error('Document upload failed:', errorText);
-          throw new Error(`Document upload failed: ${errorText}`);
+          const errorData = (await uploadResponse.json()) as ErrorResponse;
+          throw new Error(errorData.error || 'Document upload failed');
         }
-        const { url } = await uploadResponse.json();
-        documentUrl = url;
+
+        const responseData = (await uploadResponse.json()) as UploadResponse;
+        if (!responseData.url) {
+          throw new Error('Invalid response from document upload');
+        }
+
+        documentUrl = responseData.url;
       }
 
       const requests = data.dates.map((date) => ({

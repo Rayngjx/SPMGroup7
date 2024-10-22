@@ -1,18 +1,8 @@
 'use client';
+
 import { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
-import { requests } from '@prisma/client';
-
-// Define the interface for department staff
-interface DepartmentStaff {
-  id: number;
-  name: string;
-  position: string;
-  wfhDates: string[];
-  reporting_manager: string;
-  role_id: number;
-}
 
 const TeamScheduleCalendar = dynamic(
   () => import('@/components/dashboard/staffTeamSchedule/EnhancedWFHCalendar'),
@@ -22,88 +12,85 @@ const TeamScheduleCalendar = dynamic(
   }
 );
 
-async function getApprovedRequests(teamLeadId: number) {
-  const response = await fetch(`/api/requests/?reportingManager=${teamLeadId}`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch approved requests');
-  }
-
-  const data = await response.json();
-
-  return data.filter(
-    (request: any) =>
-      request.status === 'approved' || request.status === 'withdrawn_pending'
-  );
+interface ProcessedStaffMember {
+  id: number;
+  name: string;
+  position: string;
+  wfhDates: string[];
+  pendingDates: string[];
+  withdrawPendingDates: string[];
+  reporting_manager: string;
+  role_id: number;
 }
 
-async function getUserDetails(staffId: number) {
-  const response = await fetch(`/api/users/?staffId=${staffId}`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch user details');
+async function fetchTeamData(reportingManagerId: number) {
+  // Fetch all staff under the reporting manager
+  const staffResponse = await fetch(
+    `/api/users/?reportingManager=${reportingManagerId}`
+  );
+  if (!staffResponse.ok) {
+    throw new Error('Failed to fetch staff details');
   }
+  const staffMembers = await staffResponse.json();
 
-  return response.json();
+  // Fetch all requests for these staff members
+  const requestsResponse = await fetch(
+    `/api/requests/?reportingManager=${reportingManagerId}`
+  );
+  if (!requestsResponse.ok) {
+    throw new Error('Failed to fetch requests');
+  }
+  const requests = await requestsResponse.json();
+
+  // Process and combine the data
+  return staffMembers.map((staff: any) => {
+    const staffRequests = requests.filter(
+      (req: any) => req.staff_id === staff.staff_id
+    );
+
+    return {
+      id: staff.staff_id,
+      name: `${staff.staff_fname} ${staff.staff_lname}`,
+      position: staff.position,
+      wfhDates: staffRequests
+        .filter((req: any) => req.status === 'approved')
+        .map((req: any) => req.date),
+      pendingDates: staffRequests
+        .filter((req: any) => req.status === 'pending')
+        .map((req: any) => req.date),
+      withdrawPendingDates: staffRequests
+        .filter((req: any) => req.status === 'withdraw_pending')
+        .map((req: any) => req.date),
+      reporting_manager: staff.reporting_manager,
+      role_id: staff.role_id
+    };
+  });
 }
 
 export default function TeamSchedulePage() {
   const { data: session } = useSession();
-  const [departmentStaff, setDepartmentStaff] = useState<DepartmentStaff[]>([]);
+  const [staffData, setStaffData] = useState<ProcessedStaffMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const currentUser = {
-    staff_id: session?.user.staff_id ?? 0, // Provide a default value
-    staff_fname: session?.user.staff_fname ?? '', // Provide a default value
-    staff_lname: session?.user.staff_lname ?? '', // Provide a default value
-    role_id: session?.user.role_id ?? 1 // Provide a default value
-  };
 
   useEffect(() => {
-    async function fetchTeamData() {
-      if (!session?.user?.staff_id) return;
+    async function loadTeamData() {
+      if (!session?.user?.reporting_manager) return;
 
       try {
-        // Fetch approved requests for the current user's team
-        const approvedRequests = await getApprovedRequests(
-          session.user.reporting_manager
-        );
-        console.log(approvedRequests);
-        // Collect unique staff IDs from approved requests
-        const staffIds: number[] = Array.from(
-          new Set(approvedRequests.map((request: requests) => request.staff_id))
-        );
-
-        // Fetch user details for each staff member
-        const userDetailsPromises = staffIds.map((id) => getUserDetails(id));
-        const usersDetails = await Promise.all(userDetailsPromises);
-
-        // Map user details with their approved requests
-        const formattedDepartmentStaff = usersDetails.map((user) => {
-          const userApprovedDates = approvedRequests
-            .filter((request: requests) => request.staff_id === user.staff_id) // Specify the type here
-            .map((request: requests) => request.date); // Explicitly define the type here
-
-          return {
-            id: user.staff_id,
-            name: `${user.staff_fname} ${user.staff_lname}`,
-            position: user.position,
-            wfhDates: userApprovedDates,
-            reporting_manager: user.reporting_manager,
-            role_id: user.role_id ?? 1 // Provide a default value if role_id is null
-          };
-        });
-
-        setDepartmentStaff(formattedDepartmentStaff);
+        const data = await fetchTeamData(session.user.reporting_manager);
+        setStaffData(data);
       } catch (error) {
-        console.error('Error fetching team data:', error);
+        console.error('Error loading team data:', error);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchTeamData();
+    loadTeamData();
   }, [session]);
 
   if (!session) {
-    return <p>Please log in to see your team schedule.</p>;
+    return <p>Please log in to view team schedule.</p>;
   }
 
   if (loading) {
@@ -112,12 +99,8 @@ export default function TeamSchedulePage() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="mb-4 text-2xl font-bold">Team Schedule</h1>
       <Suspense fallback={<div>Loading...</div>}>
-        <TeamScheduleCalendar
-          currentUser={currentUser}
-          departmentStaff={departmentStaff}
-        />
+        <TeamScheduleCalendar staffData={staffData} />
       </Suspense>
     </div>
   );

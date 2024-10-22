@@ -18,7 +18,7 @@ const requestArraySchema = z.array(singleRequestSchema);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const staffId = searchParams.get('staffId');
+  const staff_id = searchParams.get('staff_id');
   const reportingManager = searchParams.get('reportingManager');
   const department = searchParams.get('department');
   const requestId = searchParams.get('requestId');
@@ -40,9 +40,9 @@ export async function GET(request: Request) {
       }
     });
     return NextResponse.json(specificRequest);
-  } else if (staffId) {
+  } else if (staff_id) {
     requests = await prisma.requests.findMany({
-      where: { staff_id: parseInt(staffId) }
+      where: { staff_id: parseInt(staff_id) }
     });
   } else if (reportingManager) {
     const staffIds = await prisma.users.findMany({
@@ -136,6 +136,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 export async function PUT(request: Request) {
   const body = await request.json();
   const { request_id, status, reason, processor_id } = body;

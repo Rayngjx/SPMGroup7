@@ -1,21 +1,11 @@
-'use client';
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Button } from '@/components/ui/button';
 import {
   format,
@@ -24,291 +14,427 @@ import {
   isSaturday,
   isSunday,
   isToday,
-  startOfDay,
   isSameDay
 } from 'date-fns';
 import { DateSelectArg } from '@fullcalendar/core';
+import { Users } from 'lucide-react';
 
 interface Staff {
   id: number;
   name: string;
   position: string;
   wfhDates: string[];
+  pendingDates: string[];
+  withdrawPendingDates: string[];
   reporting_manager: string;
   role_id: number;
 }
 
-interface TeamScheduleCalendarProps {
-  currentUser: {
-    staff_id: number;
-    staff_fname: string;
-    staff_lname: string;
-    role_id: number;
-  };
-  departmentStaff: Staff[];
+interface DayStatus {
+  wfh: Staff[];
+  inOffice: Staff[];
+  pending: Staff[];
+  withdrawPending: Staff[];
 }
 
+interface TeamScheduleCalendarProps {
+  staffData: Staff[];
+}
+
+const StaffList = ({
+  dayStatus,
+  date
+}: {
+  dayStatus: DayStatus;
+  date: Date;
+}) => {
+  if (isSaturday(date) || isSunday(date)) {
+    return (
+      <div className="p-4 text-center text-gray-500">Weekend - No Work Day</div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <ScrollArea>
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-semibold">Working From Home</h3>
+            <span className="text-sm text-gray-500">
+              {dayStatus.wfh.length} staff
+            </span>
+          </div>
+          <div className="space-y-2">
+            {dayStatus.wfh.map((staff) => (
+              <div
+                key={staff.id}
+                className="flex items-center justify-between rounded bg-green-50 p-2"
+              >
+                <div>
+                  <div className="font-medium">{staff.name}</div>
+                  <div className="text-sm text-gray-500">{staff.position}</div>
+                </div>
+                <span className="rounded bg-green-200 px-2 py-1 text-xs">
+                  WFH
+                </span>
+              </div>
+            ))}
+            {dayStatus.withdrawPending.map((staff) => (
+              <div
+                key={staff.id}
+                className="flex items-center justify-between rounded bg-blue-50 p-2"
+              >
+                <div>
+                  <div className="font-medium">{staff.name}</div>
+                  <div className="text-sm text-gray-500">{staff.position}</div>
+                </div>
+                <span className="rounded bg-blue-200 px-2 py-1 text-xs">
+                  Withdraw Pending
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </ScrollArea>
+
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-semibold">In Office</h3>
+          <span className="text-sm text-gray-500">
+            {dayStatus.inOffice.length + dayStatus.pending.length} staff
+          </span>
+        </div>
+        <div className="space-y-2">
+          {dayStatus.pending.map((staff) => (
+            <div
+              key={staff.id}
+              className="flex items-center justify-between rounded bg-yellow-50 p-2"
+            >
+              <div>
+                <div className="font-medium">{staff.name}</div>
+                <div className="text-sm text-gray-500">{staff.position}</div>
+              </div>
+              <span className="rounded bg-yellow-200 px-2 py-1 text-xs">
+                WFH Pending
+              </span>
+            </div>
+          ))}
+          {dayStatus.inOffice.map((staff) => (
+            <div
+              key={staff.id}
+              className="flex items-center justify-between rounded p-2 hover:bg-gray-50"
+            >
+              <div>
+                <div className="font-medium">{staff.name}</div>
+                <div className="text-sm text-gray-500">{staff.position}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function TeamScheduleCalendar({
-  currentUser,
-  departmentStaff
+  staffData
 }: TeamScheduleCalendarProps) {
-  const { data: session, status } = useSession();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedDateStaff, setSelectedDateStaff] = useState<{
-    wfh: Staff[];
-    inOffice: Staff[];
-  }>({ wfh: [], inOffice: [] });
-  const [calendarView, setCalendarView] = useState<
-    'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'
-  >('dayGridMonth');
+  const [dayStatus, setDayStatus] = useState<DayStatus>({
+    wfh: [],
+    inOffice: [],
+    pending: [],
+    withdrawPending: []
+  });
+  const [calendarView, setCalendarView] =
+    useState<'dayGridMonth'>('dayGridMonth');
   const calendarRef = useRef<FullCalendar | null>(null);
 
-  const updateSelectedDateStaff = useCallback(
+  const updateDayStatus = useCallback(
     (date: Date) => {
-      if (!isValid(date)) {
+      if (!isValid(date)) return;
+
+      if (isSaturday(date) || isSunday(date)) {
+        setDayStatus({
+          wfh: [],
+          inOffice: [],
+          pending: [],
+          withdrawPending: []
+        });
         return;
       }
-      const dateString = format(date, 'yyyy-MM-dd');
-      if (isSaturday(date) || isSunday(date)) {
-        setSelectedDateStaff({ wfh: [], inOffice: [] });
-      } else {
-        const wfh = departmentStaff.filter((staff) =>
-          staff.wfhDates.some((wfhDate) => isSameDay(new Date(wfhDate), date))
-        );
-        const inOffice = departmentStaff.filter(
-          (staff) =>
-            !staff.wfhDates.some((wfhDate) =>
-              isSameDay(new Date(wfhDate), date)
-            )
-        );
-        setSelectedDateStaff({ wfh, inOffice });
-      }
+
+      const wfh = staffData.filter((staff) =>
+        staff.wfhDates.some((wfhDate) => isSameDay(new Date(wfhDate), date))
+      );
+
+      const pending = staffData.filter((staff) =>
+        staff.pendingDates.some((pendingDate) =>
+          isSameDay(new Date(pendingDate), date)
+        )
+      );
+
+      const withdrawPending = staffData.filter((staff) =>
+        staff.withdrawPendingDates.some((withdrawDate) =>
+          isSameDay(new Date(withdrawDate), date)
+        )
+      );
+
+      // Everyone not WFH, pending, or withdraw pending is in office
+      const inOffice = staffData.filter(
+        (staff) =>
+          !staff.wfhDates.some((wfhDate) =>
+            isSameDay(new Date(wfhDate), date)
+          ) &&
+          !staff.pendingDates.some((pendingDate) =>
+            isSameDay(new Date(pendingDate), date)
+          ) &&
+          !staff.withdrawPendingDates.some((withdrawDate) =>
+            isSameDay(new Date(withdrawDate), date)
+          )
+      );
+
+      setDayStatus({ wfh, inOffice, pending, withdrawPending });
     },
-    [departmentStaff]
+    [staffData]
   );
 
   useEffect(() => {
-    updateSelectedDateStaff(selectedDate);
-  }, [selectedDate, updateSelectedDateStaff]);
+    updateDayStatus(selectedDate);
+  }, [selectedDate, updateDayStatus]);
 
   const handleDateSelect = (arg: { date: Date | string }) => {
     const newDate =
       arg.date instanceof Date ? arg.date : parseISO(arg.date as string);
     if (isValid(newDate)) {
       setSelectedDate(newDate);
-      updateSelectedDateStaff(newDate);
-    } else {
-      console.error('Invalid date selected:', arg.date);
     }
   };
 
   const handleTodayClick = () => {
     const today = new Date();
     setSelectedDate(today);
-    updateSelectedDateStaff(today);
     if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      calendarApi.today();
-    }
-  };
-
-  const handleViewChange = (
-    view: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'
-  ) => {
-    setCalendarView(view);
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      calendarApi.changeView(view);
+      calendarRef.current.getApi().today();
     }
   };
 
   const dayCellDidMount = (arg: { date: Date; el: HTMLElement }) => {
     const { date, el } = arg;
+
     if (isSaturday(date) || isSunday(date)) {
-      el.style.background = 'white';
+      el.style.backgroundColor = '#f3f4f6';
+      el.style.color = '#9ca3af';
       return;
     }
 
-    const wfhCount = departmentStaff.filter((staff) =>
-      staff.wfhDates.some(
-        (wfhDate) =>
-          startOfDay(new Date(wfhDate)).getTime() === startOfDay(date).getTime()
-      )
+    // Check for approved WFH requests (including withdraw_pending)
+    const wfhCount = staffData.filter((staff) =>
+      staff.wfhDates.some((wfhDate) => isSameDay(new Date(wfhDate), date))
     ).length;
-    const totalStaff = departmentStaff.length;
 
-    const wfhRatio = wfhCount / totalStaff;
-    const opacity = Math.max(0.1, wfhRatio).toFixed(2); // Ensure minimum opacity of 0.1
+    const pendingRequests = staffData.filter((staff) =>
+      staff.pendingDates.some((pendingDate) =>
+        isSameDay(new Date(pendingDate), date)
+      )
+    );
 
-    el.style.background = `rgba(52, 211, 153, ${opacity})`; // Green for WFH
+    const withdrawPendingRequests = staffData.filter((staff) =>
+      staff.withdrawPendingDates.some((withdrawDate) =>
+        isSameDay(new Date(withdrawDate), date)
+      )
+    );
+
+    // Apply WFH background if there are approved requests
+    if (wfhCount > 0) {
+      const opacity = Math.max(0.1, wfhCount / staffData.length).toFixed(2);
+      el.style.backgroundColor = `rgba(52, 211, 153, ${opacity})`;
+    }
+
+    // Create dot container
+    if (pendingRequests.length > 0 || withdrawPendingRequests.length > 0) {
+      const dotContainer = document.createElement('div');
+      dotContainer.style.position = 'absolute';
+      dotContainer.style.bottom = '4px';
+      dotContainer.style.left = '4px';
+      dotContainer.style.display = 'flex';
+      dotContainer.style.gap = '2px';
+      dotContainer.style.flexWrap = 'wrap';
+      dotContainer.style.maxWidth = '50%';
+
+      // Add yellow dots for pending requests
+      pendingRequests.forEach(() => {
+        const dot = document.createElement('div');
+        dot.style.width = '4px';
+        dot.style.height = '4px';
+        dot.style.backgroundColor = '#fbbf24'; // Amber color
+        dot.style.borderRadius = '50%';
+        dotContainer.appendChild(dot);
+      });
+
+      // Add blue dots for withdraw pending requests
+      withdrawPendingRequests.forEach(() => {
+        const dot = document.createElement('div');
+        dot.style.width = '4px';
+        dot.style.height = '4px';
+        dot.style.backgroundColor = '#3b82f6'; // Blue color
+        dot.style.borderRadius = '50%';
+        dotContainer.appendChild(dot);
+      });
+
+      el.style.position = 'relative';
+      el.appendChild(dotContainer);
+    }
 
     if (isToday(date)) {
-      el.style.border = '2px solid #3B82F6'; // Blue border for today's date
+      el.style.border = '2px solid #3B82F6';
     }
   };
-  useEffect(() => {
-    updateSelectedDateStaff(selectedDate);
-  }, [selectedDate, departmentStaff, updateSelectedDateStaff]);
 
-  const calendarEvents = departmentStaff.flatMap((staff) =>
-    staff.wfhDates
-      .filter((date) => {
-        const dateObj = new Date(date);
-        return !isSaturday(dateObj) && !isSunday(dateObj);
-      })
-      .map((date) => ({
-        title: `${staff.name} - WFH`,
-        date: date,
-        color: 'rgba(52, 211, 153, 0.5)', // Light green background
-        textColor: 'black',
-        className: 'text-xs p-1 rounded'
-      }))
-  );
-
-  if (status === 'loading') {
-    return <div>Loading...</div>;
-  }
-
-  // if (!session || currentUser.role_id !== 3) {
-  //   return (
-  //     <Card className="shadow-sm">
-  //       <CardHeader>
-  //         <CardTitle>Access Denied</CardTitle>
-  //       </CardHeader>
-  //       <CardContent>
-  //         <p>You do not have permission to view this page.</p>
-  //       </CardContent>
-  //     </Card>
-  //   );
-  // }
-
-  // ... (rest of the return statement remains the same)
   return (
-    <div className="grid grid-cols-3 gap-6">
-      <Card className="col-span-2 shadow-sm">
-        <CardHeader>
+    <div
+      className="grid grid-cols-3 gap-6"
+      style={{ height: 'calc(100vh - 140px)' }}
+    >
+      <Card className="col-span-2 flex flex-col shadow-sm">
+        <CardHeader className="flex-none border-b">
           <CardTitle className="flex items-center justify-between">
-            <span>Team Schedule Calendar</span>
-            <div className="space-x-2">
-              <Button
-                onClick={() => handleViewChange('dayGridMonth')}
-                variant={
-                  calendarView === 'dayGridMonth' ? 'default' : 'outline'
-                }
-              >
-                Month
+            <span>Work From Home Schedule</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleTodayClick}>
+                today
               </Button>
-              <Button
-                onClick={() => handleViewChange('timeGridWeek')}
-                variant={
-                  calendarView === 'timeGridWeek' ? 'default' : 'outline'
-                }
-              >
-                Week
-              </Button>
-              <Button
-                onClick={() => handleViewChange('timeGridDay')}
-                variant={calendarView === 'timeGridDay' ? 'default' : 'outline'}
-              >
-                Day
-              </Button>
-              <Button onClick={handleTodayClick}>Today</Button>
+              <div className="flex overflow-hidden rounded-md">
+                <Button variant="secondary" size="sm">
+                  month
+                </Button>
+                <Button variant="outline" size="sm">
+                  week
+                </Button>
+                <Button variant="outline" size="sm">
+                  day
+                </Button>
+              </div>
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[600px]">
-            <FullCalendar
-              ref={calendarRef}
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView={calendarView}
-              dateClick={handleDateSelect}
-              dayCellDidMount={dayCellDidMount}
-              headerToolbar={{
-                left: 'prev,next',
-                center: 'title',
-                right: ''
-              }}
-              height="100%"
-              selectable={true}
-              select={(arg: DateSelectArg) =>
-                handleDateSelect({ date: arg.start })
-              } // Updated to pass the correct structure
-              events={calendarEvents}
-              eventContent={(eventInfo) => {
-                return (
-                  <div className="overflow-hidden text-ellipsis whitespace-nowrap rounded bg-green-200 p-1 text-xs">
-                    {eventInfo.event.title}
-                  </div>
-                );
-              }}
-            />
-          </div>
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView={calendarView}
+            dateClick={handleDateSelect}
+            dayCellDidMount={dayCellDidMount}
+            headerToolbar={{
+              left: 'prev,next',
+              center: 'title',
+              right: ''
+            }}
+            height="100%"
+            selectable={true}
+            select={(arg: DateSelectArg) =>
+              handleDateSelect({ date: arg.start })
+            }
+          />
         </CardContent>
       </Card>
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>
-            Staff Status for{' '}
-            {isValid(selectedDate)
-              ? format(selectedDate, 'MMMM d, yyyy')
-              : 'Invalid Date'}
+
+      <Card className="flex flex-col shadow-sm">
+        <CardHeader className="flex-none border-b">
+          <CardTitle className="flex items-center justify-between">
+            <span>
+              {isValid(selectedDate)
+                ? format(selectedDate, 'MMMM d, yyyy')
+                : 'Invalid Date'}
+            </span>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Users size={16} />
+              <span>
+                {dayStatus.wfh.length +
+                  dayStatus.inOffice.length +
+                  dayStatus.pending.length}{' '}
+                total
+              </span>
+            </div>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {isSaturday(selectedDate) || isSunday(selectedDate) ? (
-            <p>No one working on weekends</p>
-          ) : (
-            <div className="space-y-4">
+        <ScrollArea className="flex-1">
+          <CardContent className="pt-4">
+            <div className="space-y-6">
               <div>
-                <h3 className="mb-2 font-semibold">Working From Home</h3>
-                {selectedDateStaff.wfh.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Position</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedDateStaff.wfh.map((staff) => (
-                        <TableRow key={staff.id}>
-                          <TableCell>{staff.name}</TableCell>
-                          <TableCell>{staff.position}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p>No staff working from home on this date.</p>
-                )}
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Working From Home</h3>
+                  <span className="text-sm text-gray-500">
+                    {dayStatus.wfh.length + dayStatus.withdrawPending.length}{' '}
+                    staff
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {dayStatus.wfh
+                    .concat(dayStatus.withdrawPending)
+                    .map((staff) => (
+                      <div
+                        key={staff.id}
+                        className="flex items-center justify-between py-2"
+                      >
+                        <div>
+                          <div className="font-medium">{staff.name}</div>
+                          <div className="text-sm text-gray-500">
+                            {staff.position}
+                          </div>
+                        </div>
+                        {dayStatus.withdrawPending.includes(staff) && (
+                          <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                            Withdraw Pending
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                </div>
               </div>
+
               <div>
-                <h3 className="mb-2 font-semibold">In Office</h3>
-                {selectedDateStaff.inOffice.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Position</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedDateStaff.inOffice.map((staff) => (
-                        <TableRow key={staff.id}>
-                          <TableCell>{staff.name}</TableCell>
-                          <TableCell>{staff.position}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p>No staff in office on this date.</p>
-                )}
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-medium">In Office</h3>
+                  <span className="text-sm text-gray-500">
+                    {dayStatus.inOffice.length + dayStatus.pending.length} staff
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {dayStatus.pending.map((staff) => (
+                    <div
+                      key={staff.id}
+                      className="flex items-center justify-between py-2"
+                    >
+                      <div>
+                        <div className="font-medium">{staff.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {staff.position}
+                        </div>
+                      </div>
+                      <span className="rounded bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
+                        WFH Pending
+                      </span>
+                    </div>
+                  ))}
+                  {dayStatus.inOffice.map((staff) => (
+                    <div
+                      key={staff.id}
+                      className="flex items-center justify-between py-2"
+                    >
+                      <div>
+                        <div className="font-medium">{staff.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {staff.position}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          )}
-        </CardContent>
+          </CardContent>
+        </ScrollArea>
       </Card>
     </div>
   );
