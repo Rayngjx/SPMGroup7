@@ -123,7 +123,7 @@ export default function RequestLogThread() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push('/dashboard/logs')}
+          onClick={() => router.back()}
           className="mr-4"
         >
           <ChevronLeft className="mr-2 h-4 w-4" /> Back to Logs

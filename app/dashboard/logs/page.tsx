@@ -24,16 +24,44 @@ import { ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
 
+type Department =
+  | 'CEO'
+  | 'Sales'
+  | 'Solutioning'
+  | 'Engineering'
+  | 'HR'
+  | 'Finance'
+  | 'Consultancy'
+  | 'IT';
+const departments: Department[] = [
+  'CEO',
+  'Sales',
+  'Solutioning',
+  'Engineering',
+  'HR',
+  'Finance',
+  'Consultancy',
+  'IT'
+];
+
 interface Log {
   log_id: number;
   staff_id: number;
   request_id: number;
   processor_id: number;
+  department: string;
   reason: string;
   action: string;
   created_at: string;
-  users_logs_staff_idTousers: { staff_fname: string; staff_lname: string };
-  users_logs_processor_idTousers: { staff_fname: string; staff_lname: string };
+  users_logs_staff_idTousers: {
+    staff_fname: string;
+    staff_lname: string;
+    department: Department;
+  };
+  users_logs_processor_idTousers: {
+    staff_fname: string;
+    staff_lname: string;
+  };
 }
 
 export default function LogsPage() {
@@ -42,6 +70,7 @@ export default function LogsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('');
   const [requestTypeFilter, setRequestTypeFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Log;
     direction: 'asc' | 'desc';
@@ -52,10 +81,43 @@ export default function LogsPage() {
   }, []);
 
   const fetchLogs = async () => {
-    const response = await fetch('/api/logs');
-    const data = await response.json();
-    setLogs(data);
-    setFilteredLogs(data);
+    try {
+      // Fetch logs
+      const logsResponse = await fetch('/api/logs');
+      const logsData = await logsResponse.json();
+
+      // Get unique staff IDs
+      const staffIds = Array.from(
+        new Set(logsData.map((log: Log) => log.staff_id))
+      );
+
+      // Fetch each user's details individually to ensure we get array response
+      const userPromises = staffIds.map((id) =>
+        fetch(`/api/users?staff_id=${id}`).then((res) => res.json())
+      );
+
+      const usersResponses = await Promise.all(userPromises);
+      // Flatten and handle both array and single object responses
+      const usersData = usersResponses.map((response) =>
+        Array.isArray(response) ? response[0] : response
+      );
+
+      // Create a map of staff_id to department
+      const departmentMap = new Map(
+        usersData.map((user) => [user.staff_id, user.department])
+      );
+
+      // Add department to each log
+      const logsWithDepartment = logsData.map((log: Log) => ({
+        ...log,
+        department: departmentMap.get(log.staff_id) || 'Unknown'
+      }));
+      console.log(logsWithDepartment);
+      setLogs(logsWithDepartment);
+      setFilteredLogs(logsWithDepartment);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
   };
 
   useEffect(() => {
@@ -74,12 +136,13 @@ export default function LogsPage() {
             .toLowerCase()
             .includes(searchTerm.toLowerCase())) &&
         (actionFilter === '' || log.action === actionFilter) &&
+        (departmentFilter === '' || log.department === departmentFilter) &&
         (requestTypeFilter === '' ||
           (requestTypeFilter === 'withdraw' && isWithdrawRequest(log.action)) ||
           (requestTypeFilter === 'normal' && !isWithdrawRequest(log.action)))
     );
     setFilteredLogs(filtered);
-  }, [searchTerm, actionFilter, requestTypeFilter, logs]);
+  }, [searchTerm, actionFilter, requestTypeFilter, departmentFilter, logs]);
 
   const sortData = (key: keyof Log) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -106,7 +169,7 @@ export default function LogsPage() {
 
   const formatDate = (dateString: string) => {
     try {
-      return format(parseISO(dateString), 'MMM d, yyyy HH:mm:ss');
+      return format(parseISO(dateString), 'MMM d, yyyy');
     } catch (error) {
       console.error('Error formatting date:', error);
       return dateString;
@@ -148,7 +211,7 @@ export default function LogsPage() {
         <CardTitle>Logs</CardTitle>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="mb-4 flex space-x-4">
+        <div className="mb-4 flex flex-wrap gap-4">
           <Input
             placeholder="Search by Staff or Processor Name"
             value={searchTerm}
@@ -156,7 +219,7 @@ export default function LogsPage() {
             className="w-64"
           />
           <Select onValueChange={(value) => setActionFilter(value)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Filter by Action" />
             </SelectTrigger>
             <SelectContent>
@@ -168,13 +231,26 @@ export default function LogsPage() {
             </SelectContent>
           </Select>
           <Select onValueChange={(value) => setRequestTypeFilter(value)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Request Type" />
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Request Type" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All Requests</SelectItem>
-              <SelectItem value="normal">Normal Requests</SelectItem>
-              <SelectItem value="withdraw">Withdraw Requests</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="withdraw">Withdraw</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select onValueChange={(value) => setDepartmentFilter(value)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter by Department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Departments</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept} value={dept}>
+                  {dept}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -195,6 +271,12 @@ export default function LogsPage() {
                   )}
                 </TableHead>
                 <TableHead>Staff</TableHead>
+                <TableHead onClick={() => sortData('department')}>
+                  Department{' '}
+                  {sortConfig?.key === 'department' && (
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  )}
+                </TableHead>
                 <TableHead>Processor</TableHead>
                 <TableHead onClick={() => sortData('action')}>
                   Action{' '}
@@ -222,6 +304,7 @@ export default function LogsPage() {
                   <TableCell>{log.log_id}</TableCell>
                   <TableCell>{log.request_id}</TableCell>
                   <TableCell>{`${log.users_logs_staff_idTousers.staff_fname} ${log.users_logs_staff_idTousers.staff_lname}`}</TableCell>
+                  <TableCell>{log.department}</TableCell>
                   <TableCell>{`${log.users_logs_processor_idTousers.staff_fname} ${log.users_logs_processor_idTousers.staff_lname}`}</TableCell>
                   <TableCell>
                     <Badge className={getActionColor(log.action)}>

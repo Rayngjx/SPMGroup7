@@ -30,14 +30,14 @@ export const navItems: RoleBasedNavItem[] = [
     label: 'Dashboard',
     allowedRoles: [1, 2, 3],
     allowedDepartments: [
-      'CEO',
-      'Sales',
-      'Solutioning',
-      'Engineering',
-      'HR',
-      'Finance',
-      'Consultancy',
-      'IT'
+      // 'CEO',
+      // 'Sales',
+      // 'Solutioning',
+      // 'Engineering',
+      'HR'
+      // 'Finance',
+      // 'Consultancy',
+      // 'IT'
     ]
   },
   {
@@ -47,14 +47,14 @@ export const navItems: RoleBasedNavItem[] = [
     label: 'Staff',
     allowedRoles: [1, 3],
     allowedDepartments: [
-      'CEO',
-      'Sales',
-      'Solutioning',
-      'Engineering',
-      'HR',
-      'Finance',
-      'Consultancy',
-      'IT'
+      // 'CEO',
+      // 'Sales',
+      // 'Solutioning',
+      // 'Engineering',
+      'HR'
+      // 'Finance',
+      // 'Consultancy',
+      // 'IT'
     ]
   },
   {
@@ -64,14 +64,14 @@ export const navItems: RoleBasedNavItem[] = [
     label: 'user',
     allowedRoles: [1, 2, 3],
     allowedDepartments: [
-      'CEO',
-      'Sales',
-      'Solutioning',
-      'Engineering',
-      'HR',
-      'Finance',
-      'Consultancy',
-      'IT'
+      // 'CEO',
+      // 'Sales',
+      // 'Solutioning',
+      // 'Engineering',
+      // 'HR',
+      // 'Finance',
+      // 'Consultancy',
+      // 'IT'
     ]
   },
   {
@@ -98,14 +98,14 @@ export const navItems: RoleBasedNavItem[] = [
     label: 'ManagerTeamSchedule',
     allowedRoles: [1, 3],
     allowedDepartments: [
-      'CEO',
-      'Sales',
-      'Solutioning',
-      'Engineering',
-      'HR',
-      'Finance',
-      'Consultancy',
-      'IT'
+      // 'CEO',
+      // 'Sales',
+      // 'Solutioning',
+      // 'Engineering',
+      // 'HR',
+      // 'Finance',
+      // 'Consultancy',
+      // 'IT'
     ]
   },
   {
