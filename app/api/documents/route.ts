@@ -80,7 +80,7 @@ export async function GET(
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : 'Internal Server Error';
-    console.error('Unexpected error:', err);
+    // console.error('Unexpected error:', err);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
@@ -111,11 +111,11 @@ export async function POST(
       }
     }
 
-    console.log('File details:', {
-      name: file.name,
-      type: file.type,
-      size: file.size
-    });
+    // console.log('File details:', {
+    //   name: file.name,
+    //   type: file.type,
+    //   size: file.size
+    // });
 
     // Generate unique filename using timestamp and original name
     const timestamp = Date.now();
@@ -130,7 +130,7 @@ export async function POST(
       });
 
     if (error) {
-      console.error('Supabase upload error:', error);
+      // console.error('Supabase upload error:', error);
       return NextResponse.json(
         { error: `File upload failed: ${error.message}` },
         { status: 500 }
@@ -142,7 +142,7 @@ export async function POST(
       .getPublicUrl(filename);
 
     if (urlError || !publicUrlData?.publicUrl) {
-      console.error('Error getting public URL:', urlError);
+      // console.error('Error getting public URL:', urlError);
       return NextResponse.json(
         {
           error: `Could not get public URL: ${
@@ -161,7 +161,7 @@ export async function POST(
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : 'Internal Server Error';
-    console.error('Unexpected error in document upload:', err);
+    // console.error('Unexpected error in document upload:', err);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

@@ -1,10 +1,25 @@
 import { NavItem } from '@/types';
 
 export type UserRole = 1 | 2 | 3;
+export type UserDepartment =
+  | 'CEO'
+  | 'Sales'
+  | 'Solutioning'
+  | 'Engineering'
+  | 'HR'
+  | 'Finance'
+  | 'Consultancy'
+  | 'IT';
 
 // Extended NavItem type to include role-based access
 interface RoleBasedNavItem extends NavItem {
   allowedRoles: UserRole[];
+  allowedDepartments: UserDepartment[];
+}
+
+interface UserAccess {
+  role: UserRole;
+  department: UserDepartment;
 }
 
 export const navItems: RoleBasedNavItem[] = [
@@ -13,181 +28,187 @@ export const navItems: RoleBasedNavItem[] = [
     href: '/dashboard',
     icon: 'dashboard',
     label: 'Dashboard',
-    allowedRoles: [1, 2, 3]
+    allowedRoles: [1, 2, 3],
+    allowedDepartments: [
+      'CEO',
+      'Sales',
+      'Solutioning',
+      'Engineering',
+      'HR',
+      'Finance',
+      'Consultancy',
+      'IT'
+    ]
   },
   {
     title: 'Staff',
     href: '/dashboard/staff',
     icon: 'contact2',
     label: 'Staff',
-    allowedRoles: [1, 3]
+    allowedRoles: [1, 3],
+    allowedDepartments: [
+      'CEO',
+      'Sales',
+      'Solutioning',
+      'Engineering',
+      'HR',
+      'Finance',
+      'Consultancy',
+      'IT'
+    ]
   },
   {
     title: 'User',
     href: '/dashboard/user',
     icon: 'user',
     label: 'user',
-    allowedRoles: [1, 2, 3]
+    allowedRoles: [1, 2, 3],
+    allowedDepartments: [
+      'CEO',
+      'Sales',
+      'Solutioning',
+      'Engineering',
+      'HR',
+      'Finance',
+      'Consultancy',
+      'IT'
+    ]
   },
   {
     title: 'Team',
     href: '/dashboard/teamschedule',
     icon: 'users',
     label: 'TeamSchedule',
-    allowedRoles: [1, 2, 3]
+    allowedRoles: [1, 2, 3],
+    allowedDepartments: [
+      'CEO',
+      'Sales',
+      'Solutioning',
+      'Engineering',
+      'HR',
+      'Finance',
+      'Consultancy',
+      'IT'
+    ]
   },
   {
     title: 'Manager',
     href: '/dashboard/manager-team-schedule',
     icon: 'laptop',
     label: 'ManagerTeamSchedule',
-    allowedRoles: [1, 3]
+    allowedRoles: [1, 3],
+    allowedDepartments: [
+      'CEO',
+      'Sales',
+      'Solutioning',
+      'Engineering',
+      'HR',
+      'Finance',
+      'Consultancy',
+      'IT'
+    ]
   },
   {
     title: 'Logs',
     href: '/dashboard/logs',
     icon: 'clipboardlist',
     label: 'logs',
-    allowedRoles: [1]
-  },
-  {
-    title: 'Logout',
-    href: '/',
-    icon: 'login',
-    label: 'login',
-    allowedRoles: [1, 2, 3]
+    allowedRoles: [1],
+    allowedDepartments: ['HR']
   }
 ];
 
-export function getAuthorizedNavItems(userRole: UserRole): NavItem[] {
-  return navItems.filter((item) => item.allowedRoles.includes(userRole));
+export function getAuthorizedNavItems(userAccess: UserAccess): NavItem[] {
+  return navItems.filter((item) => {
+    // Check if user has an allowed role
+    const hasAllowedRole = item.allowedRoles.includes(userAccess.role);
+
+    // Special case for HR department
+    const isHR = userAccess.department === 'HR';
+    const isHRAllowed = isHR && item.allowedDepartments.includes('HR');
+
+    // For HR specific pages (like Logs), allow access if:
+    // 1. User has the required role OR
+    // 2. User is from HR department AND the page allows HR
+    // For all other pages, only check role permissions
+    const isHRRestrictedPage =
+      item.allowedDepartments.length === 1 &&
+      item.allowedDepartments.includes('HR');
+
+    if (isHRRestrictedPage) {
+      return hasAllowedRole || isHRAllowed;
+    } else {
+      return hasAllowedRole;
+    }
+  });
 }
 
-// {
-//   title: 'Employee',
-//   href: '/dashboard/employee',
-//   icon: 'employee',
-//   label: 'employee'
-// },
-// {
-//   title: 'Profile',
-//   href: '/dashboard/profile',
-//   icon: 'profile',
-//   label: 'profile'
-// },
-// {
-//   title: 'Kanban',
-//   href: '/dashboard/kanban',
-//   icon: 'kanban',
-//   label: 'kanban'
-// },
+// import { NavItem } from '@/types';
 
-// export type User = {
-//   id: number;
-//   name: string;
-//   company: string;
-//   role: string;
-//   verified: boolean;
-//   status: string;
-// };
-// export const users: User[] = [
+// export type UserRole = 1 | 2 | 3;
+
+// // Extended NavItem type to include role-based access
+// interface RoleBasedNavItem extends NavItem {
+//   allowedRoles: UserRole[];
+// }
+
+// export const navItems: RoleBasedNavItem[] = [
 //   {
-//     id: 1,
-//     name: 'Candice Schiner',
-//     company: 'Dell',
-//     role: 'Frontend Developer',
-//     verified: false,
-//     status: 'Active'
+//     title: 'Dashboard',
+//     href: '/dashboard',
+//     icon: 'dashboard',
+//     label: 'Dashboard',
+//     allowedRoles: [1, 2, 3],
 //   },
 //   {
-//     id: 2,
-//     name: 'John Doe',
-//     company: 'TechCorp',
-//     role: 'Backend Developer',
-//     verified: true,
-//     status: 'Active'
+//     title: 'Staff',
+//     href: '/dashboard/staff',
+//     icon: 'contact2',
+//     label: 'Staff',
+//     allowedRoles: [1, 3],
+
 //   },
 //   {
-//     id: 3,
-//     name: 'Alice Johnson',
-//     company: 'WebTech',
-//     role: 'UI Designer',
-//     verified: true,
-//     status: 'Active'
+//     title: 'User',
+//     href: '/dashboard/user',
+//     icon: 'user',
+//     label: 'user',
+//     allowedRoles: [1, 2, 3],
+
 //   },
 //   {
-//     id: 4,
-//     name: 'David Smith',
-//     company: 'Innovate Inc.',
-//     role: 'Fullstack Developer',
-//     verified: false,
-//     status: 'Inactive'
+//     title: 'Team',
+//     href: '/dashboard/teamschedule',
+//     icon: 'users',
+//     label: 'TeamSchedule',
+//     allowedRoles: [1, 2, 3],
+
 //   },
 //   {
-//     id: 5,
-//     name: 'Emma Wilson',
-//     company: 'TechGuru',
-//     role: 'Product Manager',
-//     verified: true,
-//     status: 'Active'
+//     title: 'Manager',
+//     href: '/dashboard/manager-team-schedule',
+//     icon: 'laptop',
+//     label: 'ManagerTeamSchedule',
+//     allowedRoles: [1, 3],
+
 //   },
 //   {
-//     id: 6,
-//     name: 'James Brown',
-//     company: 'CodeGenius',
-//     role: 'QA Engineer',
-//     verified: false,
-//     status: 'Active'
+//     title: 'Logs',
+//     href: '/dashboard/logs',
+//     icon: 'clipboardlist',
+//     label: 'logs',
+//     allowedRoles: [1],
+
 //   },
 //   {
-//     id: 7,
-//     name: 'Laura White',
-//     company: 'SoftWorks',
-//     role: 'UX Designer',
-//     verified: true,
-//     status: 'Active'
-//   },
-//   {
-//     id: 8,
-//     name: 'Michael Lee',
-//     company: 'DevCraft',
-//     role: 'DevOps Engineer',
-//     verified: false,
-//     status: 'Active'
-//   },
-//   {
-//     id: 9,
-//     name: 'Olivia Green',
-//     company: 'WebSolutions',
-//     role: 'Frontend Developer',
-//     verified: true,
-//     status: 'Active'
-//   },
-//   {
-//     id: 10,
-//     name: 'Robert Taylor',
-//     company: 'DataTech',
-//     role: 'Data Analyst',
-//     verified: false,
-//     status: 'Active'
+//     title: 'Logout',
+//     href: '/',
+//     icon: 'login',
+//     label: 'login',
+//     allowedRoles: [1, 2, 3],
 //   }
 // ];
 
-// export type Employee = {
-//   id: number;
-//   first_name: string;
-//   last_name: string;
-//   email: string;
-//   phone: string;
-//   gender: string;
-//   date_of_birth: string; // Consider using a proper date type if possible
-//   street: string;
-//   city: string;
-//   state: string;
-//   country: string;
-//   zipcode: string;
-//   longitude?: number; // Optional field
-//   latitude?: number; // Optional field
-//   job: string;
-//   profile_picture?: string | null; // Profile picture can be a string (URL) or null (if no picture)
-// };
+// export function getAuthorizedNavItems(userRole: UserRole): NavItem[] {
+//   return navItems.filter((item) => item.allowedRoles.includes(userRole));
+// }

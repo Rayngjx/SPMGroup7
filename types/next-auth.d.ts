@@ -6,7 +6,7 @@ declare module 'next-auth' {
     staff_id: number;
     staff_fname: string;
     staff_lname: string;
-    dept_id: number | null;
+    department: string | null;
     position: string | null;
     country: string | null;
     email: string;
@@ -19,7 +19,7 @@ declare module 'next-auth' {
       staff_id: number;
       staff_fname: string;
       staff_lname: string;
-      dept_id: number | null;
+      department: string | null;
       position: string | null;
       country: string | null;
       email: string;
@@ -32,7 +32,7 @@ declare module 'next-auth' {
     staff_id: number;
     staff_fname: string;
     staff_lname: string;
-    dept_id: number | null;
+    department: string | null;
     position: string | null;
     country: string | null;
     email: string;
