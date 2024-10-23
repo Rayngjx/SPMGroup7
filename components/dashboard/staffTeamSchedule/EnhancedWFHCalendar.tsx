@@ -291,88 +291,124 @@ export default function TeamScheduleCalendar({
     }
   };
 
-  return (
-    <div
-      className="grid grid-cols-3 gap-6"
-      style={{ height: 'calc(100vh - 140px)' }}
-    >
-      <Card className="col-span-2 flex flex-col shadow-sm">
-        <CardHeader className="flex-none border-b">
-          <CardTitle className="flex items-center justify-between">
-            <span>Work From Home Schedule</span>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleTodayClick}>
-                today
-              </Button>
-              <div className="flex overflow-hidden rounded-md">
-                <Button variant="secondary" size="sm">
-                  month
-                </Button>
-                <Button variant="outline" size="sm">
-                  week
-                </Button>
-                <Button variant="outline" size="sm">
-                  day
-                </Button>
-              </div>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-hidden p-0">
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView={calendarView}
-            dateClick={handleDateSelect}
-            dayCellDidMount={dayCellDidMount}
-            headerToolbar={{
-              left: 'prev,next',
-              center: 'title',
-              right: ''
-            }}
-            height="100%"
-            selectable={true}
-            select={(arg: DateSelectArg) =>
-              handleDateSelect({ date: arg.start })
-            }
-          />
-        </CardContent>
-      </Card>
+  const scrollableStyle: React.CSSProperties = {
+    scrollbarWidth: 'thin', // For Firefox
+    scrollbarColor: '#888 #f1f1f1' // For Firefox
+  };
 
-      <Card className="flex flex-col shadow-sm">
-        <CardHeader className="flex-none border-b">
-          <CardTitle className="flex items-center justify-between">
-            <span>
-              {isValid(selectedDate)
-                ? format(selectedDate, 'MMMM d, yyyy')
-                : 'Invalid Date'}
-            </span>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Users size={16} />
-              <span>
-                {dayStatus.wfh.length +
-                  dayStatus.inOffice.length +
-                  dayStatus.pending.length}{' '}
-                total
-              </span>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <ScrollArea className="flex-1">
-          <CardContent className="pt-4">
-            <div className="space-y-6">
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-medium">Working From Home</h3>
-                  <span className="text-sm text-gray-500">
-                    {dayStatus.wfh.length + dayStatus.withdrawPending.length}{' '}
-                    staff
-                  </span>
+  return (
+    <div className="max-h-screen overflow-y-auto" style={{ maxHeight: '90vh' }}>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="flex flex-col shadow-sm md:col-span-2">
+          <CardHeader className="flex-none border-b">
+            <CardTitle className="flex items-center justify-between">
+              <span>Work From Home Schedule</span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleTodayClick}>
+                  today
+                </Button>
+                <div className="flex overflow-hidden rounded-md">
+                  <Button variant="secondary" size="sm">
+                    month
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    week
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    day
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  {dayStatus.wfh
-                    .concat(dayStatus.withdrawPending)
-                    .map((staff) => (
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent
+            className="flex-1 overflow-y-auto p-0"
+            style={scrollableStyle}
+          >
+            <FullCalendar
+              ref={calendarRef}
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView={calendarView}
+              dateClick={handleDateSelect}
+              dayCellDidMount={dayCellDidMount}
+              headerToolbar={{
+                left: 'prev,next',
+                center: 'title',
+                right: ''
+              }}
+              height="auto"
+              selectable={true}
+              select={(arg: DateSelectArg) =>
+                handleDateSelect({ date: arg.start })
+              }
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col shadow-sm">
+          <CardHeader className="flex-none border-b">
+            <CardTitle className="flex items-center justify-between">
+              <span>
+                {isValid(selectedDate)
+                  ? format(selectedDate, 'MMMM d, yyyy')
+                  : 'Invalid Date'}
+              </span>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Users size={16} />
+                <span>
+                  {dayStatus.wfh.length +
+                    dayStatus.inOffice.length +
+                    dayStatus.pending.length}{' '}
+                  total
+                </span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <ScrollArea className="lg:max-h-[800px]overflow-y-auto max-h-[500px] flex-1 md:max-h-[600px]">
+            <CardContent className="overflow-y-auto pt-4">
+              <div className="space-y-6">
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-medium">Working From Home</h3>
+                    <span className="text-sm text-gray-500">
+                      {dayStatus.wfh.length + dayStatus.withdrawPending.length}{' '}
+                      staff
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {dayStatus.wfh
+                      .concat(dayStatus.withdrawPending)
+                      .map((staff) => (
+                        <div
+                          key={staff.id}
+                          className="flex items-center justify-between py-2"
+                        >
+                          <div>
+                            <div className="font-medium">{staff.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {staff.position}
+                            </div>
+                          </div>
+                          {dayStatus.withdrawPending.includes(staff) && (
+                            <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                              Withdraw Pending
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-medium">In Office</h3>
+                    <span className="text-sm text-gray-500">
+                      {dayStatus.inOffice.length + dayStatus.pending.length}{' '}
+                      staff
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {dayStatus.pending.map((staff) => (
                       <div
                         key={staff.id}
                         className="flex items-center justify-between py-2"
@@ -383,59 +419,31 @@ export default function TeamScheduleCalendar({
                             {staff.position}
                           </div>
                         </div>
-                        {dayStatus.withdrawPending.includes(staff) && (
-                          <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
-                            Withdraw Pending
-                          </span>
-                        )}
+                        <span className="rounded bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
+                          WFH Pending
+                        </span>
                       </div>
                     ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-medium">In Office</h3>
-                  <span className="text-sm text-gray-500">
-                    {dayStatus.inOffice.length + dayStatus.pending.length} staff
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {dayStatus.pending.map((staff) => (
-                    <div
-                      key={staff.id}
-                      className="flex items-center justify-between py-2"
-                    >
-                      <div>
-                        <div className="font-medium">{staff.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {staff.position}
+                    {dayStatus.inOffice.map((staff) => (
+                      <div
+                        key={staff.id}
+                        className="flex items-center justify-between py-2"
+                      >
+                        <div>
+                          <div className="font-medium">{staff.name}</div>
+                          <div className="text-sm text-gray-500">
+                            {staff.position}
+                          </div>
                         </div>
                       </div>
-                      <span className="rounded bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
-                        WFH Pending
-                      </span>
-                    </div>
-                  ))}
-                  {dayStatus.inOffice.map((staff) => (
-                    <div
-                      key={staff.id}
-                      className="flex items-center justify-between py-2"
-                    >
-                      <div>
-                        <div className="font-medium">{staff.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {staff.position}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </ScrollArea>
-      </Card>
+            </CardContent>
+          </ScrollArea>
+        </Card>
+      </div>
     </div>
   );
 }
