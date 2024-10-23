@@ -18,6 +18,10 @@ export default async function page() {
   let staff_fname = 'User';
   let role_id = 'User';
 
+  if (!session) {
+    return <div>Please log in</div>;
+  }
+
   if (session?.user?.id) {
     staffId = String(session.user.staff_id);
     staff_fname = String(session.user.staff_fname); // Set staffId from the session object

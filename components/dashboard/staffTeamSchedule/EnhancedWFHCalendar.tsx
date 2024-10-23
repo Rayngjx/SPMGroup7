@@ -301,8 +301,8 @@ export default function TeamScheduleCalendar({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="flex flex-col shadow-sm md:col-span-2">
           <CardHeader className="flex-none border-b">
-            <CardTitle className="flex items-center justify-between">
-              <span>Work From Home Schedule</span>
+            <CardTitle className="flex items-center justify-between md:h-4">
+              <span className="lg:size-4">Work From Home Schedule</span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleTodayClick}>
                   today
