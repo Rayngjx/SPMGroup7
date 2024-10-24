@@ -13,6 +13,7 @@ import { FormInput } from '@/components/auth/form-input';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 
 export const LoginForm = () => {
   const router = useRouter();
@@ -39,7 +40,10 @@ export const LoginForm = () => {
             return toast.error('An unknown error occurred');
           }
           // Redirect to dashboard on successful login
-          router.push('/dashboard');
+          signIn('credentials', { redirect: false }).then(() => {
+            // Redirect to dashboard on successful login
+            router.push('/dashboard');
+          });
         })
         .catch((error) => {
           console.error('Login error:', error); // Log the error

@@ -14,22 +14,13 @@ import CreateRequestForm from '@/components/forms/create-request/wfh-request';
 export default async function page() {
   const session = await auth();
 
-  if (session?.user?.staff_id) {
-    const staffId = session.user.staff_id;
-    try {
-      const getUsers = await db.users.findMany({
-        where: { staff_id: staffId }
-      }); // Log retrieved users for debugging
-    } catch (error) {
-      console.error(error);
-    }
-  } else {
-    console.error('Staff ID not found in session.');
-  }
-
   let staffId = 'User';
   let staff_fname = 'User';
   let role_id = 'User';
+
+  if (!session) {
+    return <div>Please log in</div>;
+  }
 
   if (session?.user?.id) {
     staffId = String(session.user.staff_id);
@@ -41,58 +32,6 @@ export default async function page() {
   let error = null;
   let requests = [];
 
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch users');
-    }
-
-    users = await response.json();
-    // console.log(users);
-  } catch (err: any) {
-    error = err.message;
-    console.error(error);
-  }
-
-  // try {
-  //   const testresponse = await fetch(
-  //     `${process.env.NEXT_PUBLIC_BASE_URL}/api/requests/`,
-  //     {
-  //       method: 'GET',
-  //       headers: {
-  //         'Content-Type': 'application/json'
-  //       }
-  //     }
-  //   );
-
-  //   if (!testresponse.ok) {
-  //     throw new Error('Failed to fetch requests');
-  //   }
-
-  //   requests = await testresponse.json();
-  //   console.log(requests);
-  // } catch (err: any) {
-  //   error = err.message;
-  //   console.error(error);
-  // }
-  // let getUsers;
-  // try {
-  //   getUsers = await db.users.findMany({ where: { staff_id: 130002 } });
-  //   console.log(getUsers);
-
-  //   // console.log(response
-  // } catch (error) {
-  //   console.error(error);
-  // }
   return (
     <PageContainer scrollable={true}>
       <div className="space-y-2">

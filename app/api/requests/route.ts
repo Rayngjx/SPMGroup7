@@ -18,15 +18,31 @@ const requestArraySchema = z.array(singleRequestSchema);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const staffId = searchParams.get('staffId');
+  const staff_id = searchParams.get('staff_id');
   const reportingManager = searchParams.get('reportingManager');
   const department = searchParams.get('department');
+  const requestId = searchParams.get('requestId');
 
   let requests;
-
-  if (staffId) {
+  if (requestId) {
+    const specificRequest = await prisma.requests.findUnique({
+      where: { request_id: parseInt(requestId) },
+      include: {
+        users: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true,
+            email: true
+          }
+        }
+      }
+    });
+    return NextResponse.json(specificRequest);
+  } else if (staff_id) {
     requests = await prisma.requests.findMany({
-      where: { staff_id: parseInt(staffId) }
+      where: { staff_id: parseInt(staff_id) }
     });
   } else if (reportingManager) {
     const staffIds = await prisma.users.findMany({
@@ -62,7 +78,7 @@ export async function GET(request: Request) {
         document_url: true,
         created_at: true,
         last_updated: true,
-        // temp_replacement: true,
+        processor_id: true,
         users: {
           select: {
             staff_fname: true,
@@ -120,6 +136,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 export async function PUT(request: Request) {
   const body = await request.json();
   const { request_id, status, reason, processor_id } = body;
@@ -160,6 +177,10 @@ export async function PUT(request: Request) {
       currentRequest.status === 'withdraw_pending' &&
       status === 'withdrawn'
     ) {
+      logAction = 'withdraw_approve';
+    } else if (status === 'cancelled') {
+      logAction = 'cancel';
+    } else if (status === 'withdraw_pending') {
       logAction = 'withdraw';
     } else if (status === 'cancelled') {
       logAction = 'cancel';

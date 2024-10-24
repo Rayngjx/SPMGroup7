@@ -54,7 +54,7 @@ export default function RequestList({ requests }: RequestListProps) {
           if (request.processor_id) {
             try {
               const response = await fetch(
-                `/api/users?staffId=${request.processor_id}`
+                `/api/users?staff_id=${request.processor_id}`
               );
               if (response.ok) {
                 const userData = await response.json();
@@ -74,7 +74,6 @@ export default function RequestList({ requests }: RequestListProps) {
       );
       setProcessedRequests(updatedRequests);
     };
-
     fetchProcessorNames();
   }, [requests]);
 
@@ -157,7 +156,9 @@ export default function RequestList({ requests }: RequestListProps) {
   };
 
   return (
-    <Card>
+    <Card className="h-[calc(100vh-100px)]">
+      {' '}
+      {/* Adjust the height as needed */}
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>All Requests</CardTitle>
         <Dialog>
@@ -174,8 +175,12 @@ export default function RequestList({ requests }: RequestListProps) {
           </DialogContent>
         </Dialog>
       </CardHeader>
-      <CardContent>
-        <div className="mb-4 flex space-x-4">
+      <CardContent className="p-0">
+        {' '}
+        {/* Remove default padding */}
+        <div className="mb-4 flex space-x-4 p-4">
+          {' '}
+          {/* Add padding to the filter section */}
           <Select
             onValueChange={(value) =>
               setFilters((prev) => ({ ...prev, type: value }))
@@ -208,74 +213,80 @@ export default function RequestList({ requests }: RequestListProps) {
             </SelectContent>
           </Select>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead onClick={() => sortData('status')}>
-                Type{' '}
-                {sortConfig?.key === 'status' && (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </TableHead>
-              <TableHead onClick={() => sortData('date')}>
-                Date{' '}
-                {sortConfig?.key === 'date' && (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </TableHead>
-              <TableHead onClick={() => sortData('last_updated')}>
-                Last Updated{' '}
-                {sortConfig?.key === 'last_updated' && (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </TableHead>
-              <TableHead>Document</TableHead>
-              <TableHead>Time Slot</TableHead>
-              <TableHead>Processor</TableHead>
-              <TableHead onClick={() => sortData('status')}>
-                Status{' '}
-                {sortConfig?.key === 'status' && (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {getFilteredData().map((request) => (
-              <TableRow key={request.request_id}>
-                <TableCell>{getRequestType(request.status)}</TableCell>
-                <TableCell>{formatDate(request.date)}</TableCell>
-                <TableCell>{formatDateTime(request.last_updated)}</TableCell>
-                <TableCell>
-                  {request.document_url ? (
-                    <a
-                      href={request.document_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline"
-                    >
-                      View
-                    </a>
-                  ) : (
-                    'N/A'
+        <div className="max-h-[calc(100vh-250px)] overflow-auto">
+          {' '}
+          {/* Scrollable area */}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead onClick={() => sortData('status')}>
+                  Type{' '}
+                  {sortConfig?.key === 'status' && (
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
                   )}
-                </TableCell>
-                <TableCell>{request.timeslot || 'N/A'}</TableCell>
-                <TableCell>
-                  {request.processorName ||
-                    (request.processor_id
-                      ? `ID: ${request.processor_id}`
-                      : 'N/A')}
-                </TableCell>
-                <TableCell>
-                  <Badge className={getStatusColor(request.status)}>
-                    {request.status}
-                  </Badge>
-                </TableCell>
+                </TableHead>
+                <TableHead onClick={() => sortData('date')}>
+                  Date{' '}
+                  {sortConfig?.key === 'date' && (
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  )}
+                </TableHead>
+                <TableHead onClick={() => sortData('last_updated')}>
+                  Last Updated{' '}
+                  {sortConfig?.key === 'last_updated' && (
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  )}
+                </TableHead>
+                <TableHead>Document</TableHead>
+                <TableHead>Time Slot</TableHead>
+                <TableHead>Processor</TableHead>
+                <TableHead onClick={() => sortData('status')}>
+                  Status{' '}
+                  {sortConfig?.key === 'status' && (
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  )}
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {getFilteredData().map((request) => (
+                <TableRow key={request.request_id}>
+                  <TableCell>{getRequestType(request.status)}</TableCell>
+                  <TableCell>{formatDate(request.date.toString())}</TableCell>
+                  <TableCell>
+                    {formatDateTime(request.last_updated.toString())}
+                  </TableCell>
+                  <TableCell>
+                    {request.document_url ? (
+                      <a
+                        href={request.document_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        View
+                      </a>
+                    ) : (
+                      'N/A'
+                    )}
+                  </TableCell>
+                  <TableCell>{request.timeslot || 'N/A'}</TableCell>
+                  <TableCell>
+                    {request.processorName ||
+                      (request.processor_id
+                        ? `ID: ${request.processor_id}`
+                        : 'N/A')}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getStatusColor(request.status)}>
+                      {request.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

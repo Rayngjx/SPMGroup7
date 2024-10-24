@@ -18,12 +18,46 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { supabase } from '@/lib/supabase';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_FILE_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+];
+
+const ACCEPTED_FILE_EXTENSIONS = [
+  '.pdf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.doc',
+  '.docx'
+];
+
+type UploadResponse = {
+  url: string;
+};
+
+type ErrorResponse = {
+  error: string;
+};
 
 const schema = z.object({
   dates: z.array(z.date()).min(1).max(5),
   timeslot: z.string().min(1, 'Time slot is required'),
   reason: z.string().min(1, 'Reason is required'),
-  document: z.instanceof(File).optional()
+  document: z
+    .custom<File>((file) => file instanceof File, 'Please upload a file')
+    .refine((file) => file?.size <= MAX_FILE_SIZE, 'Max file size is 5MB.')
+    .refine(
+      (file) => ACCEPTED_FILE_TYPES.includes(file?.type),
+      'Only .pdf, .jpeg and .png files are accepted.'
+    )
+    .optional()
 });
 
 type FormData = z.infer<typeof schema>;
@@ -91,22 +125,30 @@ export default function CreateRequestForm() {
       });
       return;
     }
+    console.log(supabase);
 
     try {
       let documentUrl = '';
+
       if (data.document) {
         const formData = new FormData();
         formData.append('document', data.document);
+
         const uploadResponse = await fetch('/api/documents', {
           method: 'POST',
           body: formData
         });
         if (!uploadResponse.ok) {
-          console.error('Document upload failed:', await uploadResponse.text());
-          throw new Error('Document upload failed');
+          const errorData = (await uploadResponse.json()) as ErrorResponse;
+          throw new Error(errorData.error || 'Document upload failed');
         }
-        const { url } = await uploadResponse.json();
-        documentUrl = url;
+
+        const responseData = (await uploadResponse.json()) as UploadResponse;
+        if (!responseData.url) {
+          throw new Error('Invalid response from document upload');
+        }
+
+        documentUrl = responseData.url;
       }
 
       const requests = data.dates.map((date) => ({
@@ -147,7 +189,7 @@ export default function CreateRequestForm() {
         description:
           error instanceof Error
             ? error.message
-            : 'An error occurred while submitting your requests. Please try again.',
+            : 'An error occurred while submitting your request.',
         variant: 'destructive'
       });
     }
@@ -221,9 +263,9 @@ export default function CreateRequestForm() {
               <SelectValue placeholder="Select time slot" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="full_day">Full Day</SelectItem>
-              <SelectItem value="morning">Morning</SelectItem>
-              <SelectItem value="afternoon">Afternoon</SelectItem>
+              <SelectItem value="Full Day">Full Day</SelectItem>
+              <SelectItem value="AM">Morning</SelectItem>
+              <SelectItem value="PM">Afternoon</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -245,10 +287,19 @@ export default function CreateRequestForm() {
         name="document"
         control={control}
         render={({ field }) => (
-          <Input
-            type="file"
-            onChange={(e) => field.onChange(e.target.files?.[0])}
-          />
+          <div>
+            <Input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                field.onChange(file);
+              }}
+              accept={ACCEPTED_FILE_TYPES.join(',')}
+            />
+            {errors.document && (
+              <p className="text-red-500">{errors.document.message}</p>
+            )}
+          </div>
         )}
       />
 
