@@ -1,7 +1,20 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
+
+const singleRequestSchema = z.object({
+  staff_id: z.number(),
+  timeslot: z.string(),
+  date: z.string(), // Expecting a date string in 'yyyy-MM-dd' format
+  reason: z.string(),
+  status: z.string().default('pending'),
+  document_url: z.string().optional(),
+  processor_id: z.number()
+});
+
+const requestArraySchema = z.array(singleRequestSchema);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -67,14 +80,49 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const newRequest = await prisma.requests.create({ data: body });
-  return NextResponse.json(newRequest);
-}
+  try {
+    const body = await request.json();
 
+    // Validate the request body as an array of requests
+    const validatedData = requestArraySchema.parse(body);
+
+    // Create a new request for each item in the array
+    const newRequests = await Promise.all(
+      validatedData.map(async (requestData) => {
+        return prisma.requests.create({
+          data: {
+            staff_id: requestData.staff_id,
+            timeslot: requestData.timeslot,
+            date: new Date(requestData.date), // Convert string to Date object
+            reason: requestData.reason,
+            status: requestData.status,
+            document_url: requestData.document_url,
+            processor_id: requestData.processor_id
+          }
+        });
+      })
+    );
+
+    return NextResponse.json(newRequests, { status: 201 });
+  } catch (error) {
+    console.error('Error processing request:', error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.errors },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'An error occurred while processing your request' },
+      { status: 500 }
+    );
+  }
+}
 export async function PUT(request: Request) {
   const body = await request.json();
-  const { request_id, status, processor_id, reason } = body;
+  const { request_id, status, reason, processor_id } = body;
 
   // Start a transaction
   const result = await prisma.$transaction(async (prisma) => {
@@ -113,6 +161,9 @@ export async function PUT(request: Request) {
       status === 'withdrawn'
     ) {
       logAction = 'withdraw';
+    } else if (status === 'cancelled') {
+      logAction = 'cancel';
+      // Processor ID is set to staff ID when cancelled
     } else {
       throw new Error('Invalid status transition');
     }
@@ -128,7 +179,10 @@ export async function PUT(request: Request) {
       data: {
         staff_id: currentRequest.staff_id,
         request_id: parseInt(request_id),
-        processor_id: parseInt(processor_id),
+        processor_id:
+          status === 'cancelled'
+            ? currentRequest.staff_id
+            : parseInt(processor_id),
         reason,
         action: logAction,
         created_at: new Date()
