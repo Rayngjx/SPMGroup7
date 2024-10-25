@@ -9,7 +9,7 @@ import {
 } from '@/constants/data';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, LogOut } from 'lucide-react';
-import { useSidebar } from '@/hooks/useSidebar';
+import { useNormalSidebar } from '@/hooks/UseNormalSideBar'; // New hook
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ className }: SidebarProps) {
-  const { isMinimized, toggle } = useSidebar();
+  const { isMinimized, toggle } = useNormalSidebar(); // Use the new hook
   const { data: session } = useSession();
 
   const userRole = session?.user?.role_id as UserRole;
@@ -31,7 +31,7 @@ export default function Sidebar({ className }: SidebarProps) {
     position: userPosition
   });
 
-  const handleToggle = () => {
+  const handleSidebarToggle = () => {
     toggle();
   };
 
@@ -68,7 +68,7 @@ export default function Sidebar({ className }: SidebarProps) {
           'absolute -right-3 top-10 z-50 cursor-pointer rounded-full border bg-background text-3xl text-foreground',
           isMinimized && 'rotate-180'
         )}
-        onClick={handleToggle}
+        onClick={handleSidebarToggle}
       />
       <div className="flex h-full flex-col justify-between py-4">
         <div className="px-3 py-2">

@@ -60,7 +60,7 @@ export default function Page() {
       const futureWfhReqs = requests.filter(
         (req: requests) =>
           (req.status === 'approved' || req.status === 'withdraw_pending') &&
-          isAfter(parseISO(req.date.toString()), today)
+          isAfter(parseISO(req.date), today)
       );
 
       const pendingReqs = requests.filter(
@@ -166,7 +166,7 @@ export default function Page() {
   };
 
   return (
-    <PageContainer>
+    <PageContainer scrollable={true}>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <Tabs defaultValue="schedule" className="space-y-4">
@@ -178,8 +178,8 @@ export default function Page() {
               {isLoading && <p>Loading calendar data...</p>}
               {error && <p className="text-red-500">{error}</p>}
               {!isLoading && !error && (
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="md:col-span-2">
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <div className="lg:col-span-2">
                     <PersonalCalendar events={events} />
                   </div>
                   <div>
