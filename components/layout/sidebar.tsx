@@ -47,7 +47,7 @@ export default function Sidebar({ className }: SidebarProps) {
         className
       )}
     >
-      <div className="hidden p-5 pt-10 lg:block">
+      <div className="hidden p-5 pt-10">
         <Link href={'/dashboard'}>
           <svg
             xmlns="http://www.w3.org/2000/svg"

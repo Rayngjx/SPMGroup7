@@ -157,8 +157,6 @@ export default function RequestList({ requests }: RequestListProps) {
 
   return (
     <Card className="h-[calc(100vh-100px)]">
-      {' '}
-      {/* Adjust the height as needed */}
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>All Requests</CardTitle>
         <Dialog>
@@ -176,11 +174,7 @@ export default function RequestList({ requests }: RequestListProps) {
         </Dialog>
       </CardHeader>
       <CardContent className="p-0">
-        {' '}
-        {/* Remove default padding */}
         <div className="mb-4 flex space-x-4 p-4">
-          {' '}
-          {/* Add padding to the filter section */}
           <Select
             onValueChange={(value) =>
               setFilters((prev) => ({ ...prev, type: value }))
@@ -213,11 +207,11 @@ export default function RequestList({ requests }: RequestListProps) {
             </SelectContent>
           </Select>
         </div>
-        <div className="max-h-[calc(100vh-250px)] overflow-auto">
-          {' '}
-          {/* Scrollable area */}
+        {/* Scrollable area */}
+        <div className="relative max-h-[calc(100vh-300px)] overflow-auto">
           <Table>
-            <TableHeader>
+            {/* Sticky Table Header */}
+            <TableHeader className="sticky top-0 bg-white shadow">
               <TableRow>
                 <TableHead onClick={() => sortData('status')}>
                   Type{' '}
@@ -248,6 +242,7 @@ export default function RequestList({ requests }: RequestListProps) {
                 </TableHead>
               </TableRow>
             </TableHeader>
+            {/* Table Body */}
             <TableBody>
               {getFilteredData().map((request) => (
                 <TableRow key={request.request_id}>

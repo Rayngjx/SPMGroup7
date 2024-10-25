@@ -30,15 +30,19 @@ export default async function page() {
         // This is a conditional rendering of the page title
         session?.user?.role_id === 1 ? (
           <>
-            <h1 className="text-3xl font-semibold">View Staff Dashboard</h1>
-            <div className="space-y-2">
-              <Breadcrumbs items={breadcrumbItems} />
+            <h1 className="text-xl font-semibold sm:text-3xl">
+              View Staff Dashboard
+            </h1>
+            <div className="space-y-2 ">
+              {/* <Breadcrumbs items={breadcrumbItems} /> */}
               <UserClient data={getUsers} />
             </div>
           </>
         ) : (
           <>
-            <h1 className="text-3xl font-semibold">Staff Dashboard</h1>
+            <h1 className="text-xl font-semibold sm:text-3xl">
+              Staff Dashboard
+            </h1>
             <p>Access Denied</p>
           </>
         )

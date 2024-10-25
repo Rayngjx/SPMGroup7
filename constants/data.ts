@@ -35,7 +35,7 @@ export const navItems: RoleBasedNavItem[] = [
   {
     title: 'Dashboard',
     href: '/dashboard',
-    icon: 'dashboard',
+    icon: 'user',
     label: 'Dashboard',
     allowedRoles: [1, 2, 3],
     disallowedPositions: []
@@ -49,11 +49,11 @@ export const navItems: RoleBasedNavItem[] = [
     disallowedPositions: []
   },
   {
-    title: 'User',
-    href: '/dashboard/user',
-    icon: 'user',
-    label: 'user',
-    allowedRoles: [1, 2, 3],
+    title: 'Overview',
+    href: '/dashboard/overview',
+    icon: 'dashboard',
+    label: 'overview',
+    allowedRoles: [1],
     disallowedPositions: []
   },
   {
