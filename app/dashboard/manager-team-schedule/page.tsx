@@ -14,10 +14,9 @@ export default function ManagerTeamSchedulePage() {
           Manager Team Schedule
         </h2>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <div className="col-span-4">
-          <ManagerTeamScheduleView />
-        </div>
+
+      <div className="w-full">
+        <ManagerTeamScheduleView />
       </div>
     </div>
   );
