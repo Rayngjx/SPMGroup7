@@ -10,11 +10,7 @@ import RequestList from '@/components/dashboard/ownSchedule/requestlist';
 import WfhDayList from '@/components/dashboard/ownSchedule/wfhDayList';
 import { requests } from '@prisma/client';
 import { parseISO, isAfter, startOfDay } from 'date-fns';
-
-const breadcrumbItems = [
-  { title: 'Dashboard', link: '/dashboard' },
-  { title: 'User', link: '/dashboard/user' }
-];
+import { string } from 'zod';
 
 interface CalendarEvent {
   id: string;
@@ -36,10 +32,20 @@ export default function Page() {
   const [allRequests, setAllRequests] = useState<requests[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [staffId, setStaffId] = useState<string | null>(null);
+  const [staff_fname, setStaffFname] = useState<string | null>(null);
+  const [role_id, setRoleId] = useState<string | null>(null);
+  const [position, setPosition] = useState<string | null>(null);
+  const [department, setDepartment] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.staff_id) {
       fetchCalendarData(session.user.staff_id);
+      setStaffId(String(session.user.staff_id));
+      setStaffFname(String(session.user.staff_fname));
+      setRoleId(String(session.user.role_id));
+      setPosition(String(session.user.position));
+      setDepartment(String(session.user.department));
     }
   }, [session, status]);
 
@@ -166,39 +172,47 @@ export default function Page() {
   };
 
   return (
-    <PageContainer>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="md:col-span-2">
-          <Tabs defaultValue="schedule" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="schedule">Schedule</TabsTrigger>
-              <TabsTrigger value="reqList">Request List</TabsTrigger>
-            </TabsList>
-            <TabsContent value="schedule" className="space-y-4">
-              {isLoading && <p>Loading calendar data...</p>}
-              {error && <p className="text-red-500">{error}</p>}
-              {!isLoading && !error && (
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="md:col-span-2">
-                    <PersonalCalendar events={events} />
+    <PageContainer scrollable={true}>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-2xl font-bold tracking-tight">
+            Hi, Welcome back {position}, {staff_fname} {staffId}
+          </h2>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <Tabs defaultValue="schedule" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="schedule">Schedule</TabsTrigger>
+                <TabsTrigger value="reqList">Request List</TabsTrigger>
+              </TabsList>
+              <TabsContent value="schedule" className="space-y-4">
+                {isLoading && <p>Loading calendar data...</p>}
+                {error && <p className="text-red-500">{error}</p>}
+                {!isLoading && !error && (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="md:col-span-2">
+                      <PersonalCalendar events={events} />
+                    </div>
+                    <div>
+                      <PendingRequestList
+                        requests={pendingRequests}
+                        onCancelRequest={handleCancelRequest}
+                      />
+                      <WfhDayList
+                        requests={wfhDays}
+                        onWithdrawRequest={handleWithdrawRequest}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <PendingRequestList
-                      requests={pendingRequests}
-                      onCancelRequest={handleCancelRequest}
-                    />
-                    <WfhDayList
-                      requests={wfhDays}
-                      onWithdrawRequest={handleWithdrawRequest}
-                    />
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-            <TabsContent value="reqList" className="space-y-4">
-              <RequestList requests={allRequests} />
-            </TabsContent>
-          </Tabs>
+                )}
+              </TabsContent>
+              <TabsContent value="reqList" className="space-y-4">
+                <RequestList requests={allRequests} />
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </div>
     </PageContainer>
