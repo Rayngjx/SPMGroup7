@@ -28,12 +28,21 @@ import { format, parseISO } from 'date-fns';
 import { requests } from '@prisma/client';
 import { ArrowUpDown, Plus } from 'lucide-react';
 import CreateRequestForm from '@/components/forms/create-request/wfh-request';
+import RequestActions from './request-actions-dropdown';
+import { useSession } from 'next-auth/react';
 
 interface RequestListProps {
   requests: requests[];
+  onCancelRequest?: (requestId: number) => Promise<void>;
+  onWithdrawRequest?: (requestId: number, reason: string) => Promise<void>;
 }
 
-export default function RequestList({ requests }: RequestListProps) {
+export default function RequestList({
+  requests,
+  onCancelRequest,
+  onWithdrawRequest
+}: RequestListProps) {
+  const { data: session } = useSession();
   const [processedRequests, setProcessedRequests] = useState<
     (requests & { processorName?: string })[]
   >([]);
@@ -155,6 +164,18 @@ export default function RequestList({ requests }: RequestListProps) {
     });
   };
 
+  const refreshRequests = async () => {
+    if (session?.user?.staff_id) {
+      const response = await fetch(
+        `/api/requests?staff_id=${session.user.staff_id}`
+      );
+      if (response.ok) {
+        const newRequests = await response.json();
+        setProcessedRequests(newRequests);
+      }
+    }
+  };
+
   return (
     <Card className="h-[calc(100vh-100px)]">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -240,6 +261,7 @@ export default function RequestList({ requests }: RequestListProps) {
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   )}
                 </TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             {/* Table Body */}
@@ -276,6 +298,18 @@ export default function RequestList({ requests }: RequestListProps) {
                     <Badge className={getStatusColor(request.status)}>
                       {request.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <RequestActions
+                      request={request}
+                      onCancelRequest={
+                        onCancelRequest || (() => Promise.resolve())
+                      }
+                      onWithdrawRequest={
+                        onWithdrawRequest || (() => Promise.resolve())
+                      }
+                      refreshRequests={refreshRequests}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

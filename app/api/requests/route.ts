@@ -156,7 +156,8 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   const body = await request.json();
-  const { request_id, status, reason, processor_id } = body;
+  console.log(body);
+  const { request_id, status, reason, processor_id, new_date } = body;
 
   // Start a transaction
   const result = await prisma.$transaction(async (prisma) => {
@@ -169,7 +170,53 @@ export async function PUT(request: Request) {
       throw new Error('Request not found');
     }
 
-    // Jon added: to overwrite status if the request is already approved
+    // Handle date change for pending requests
+    if (new_date && currentRequest.status === 'pending') {
+      // Check if the new date is available
+      const existingRequest = await prisma.requests.findFirst({
+        where: {
+          staff_id: currentRequest.staff_id,
+          date: new Date(new_date),
+          status: {
+            in: ['pending', 'approved', 'withdraw_pending']
+          },
+          request_id: {
+            not: parseInt(request_id) // Exclude current request
+          }
+        }
+      });
+      console.log(existingRequest);
+      // if (existingRequest) {
+      //   throw new Error('Date not available');
+      // }
+
+      // Update the request with new date
+      const updatedRequest = await prisma.requests.update({
+        where: { request_id: parseInt(request_id) },
+        data: {
+          date: new Date(new_date),
+          last_updated: new Date()
+        }
+      });
+
+      // Create a log entry for date change
+      const newLog = await prisma.logs.create({
+        data: {
+          staff_id: currentRequest.staff_id,
+          request_id: parseInt(request_id),
+          processor_id: currentRequest.staff_id,
+          reason: `Date changed from ${
+            currentRequest.date.toISOString().split('T')[0]
+          } to ${new_date}`,
+          action: 'change_date',
+          created_at: new Date()
+        }
+      });
+
+      return { updatedRequest, newLog };
+    }
+
+    // Handle status changes
     const { searchParams } = new URL(request.url);
     const reportingManager = searchParams.get('reportingManager');
 
@@ -199,9 +246,11 @@ export async function PUT(request: Request) {
       logAction = 'cancel';
     } else if (status === 'withdraw_pending') {
       logAction = 'withdraw';
-    } else if (status === 'cancelled') {
+    } else if (
+      currentRequest.status === 'withdraw_pending' &&
+      status === 'approved'
+    ) {
       logAction = 'cancel';
-      // Processor ID is set to staff ID when cancelled
     } else {
       throw new Error('Invalid status transition');
     }
@@ -209,7 +258,10 @@ export async function PUT(request: Request) {
     // Update the request
     const updatedRequest = await prisma.requests.update({
       where: { request_id: parseInt(request_id) },
-      data: { status, last_updated: new Date() }
+      data: {
+        status,
+        last_updated: new Date()
+      }
     });
 
     // Create a log entry

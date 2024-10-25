@@ -209,7 +209,11 @@ export default function Page() {
                 )}
               </TabsContent>
               <TabsContent value="reqList" className="space-y-4">
-                <RequestList requests={allRequests} />
+                <RequestList
+                  requests={allRequests}
+                  onCancelRequest={handleCancelRequest}
+                  onWithdrawRequest={handleWithdrawRequest}
+                />
               </TabsContent>
             </Tabs>
           </div>
