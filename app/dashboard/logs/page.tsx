@@ -187,6 +187,8 @@ export default function LogsPage() {
       case 'withdraw':
       case 'withdraw_pending':
         return 'bg-yellow-500';
+      case 'request':
+        return 'bg-blue-300';
       case 'cancel':
         return 'bg-gray-500';
       default:

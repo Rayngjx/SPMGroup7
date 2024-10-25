@@ -60,7 +60,7 @@ export default function Page() {
       const futureWfhReqs = requests.filter(
         (req: requests) =>
           (req.status === 'approved' || req.status === 'withdraw_pending') &&
-          isAfter(parseISO(req.date), today)
+          isAfter(parseISO(req.date.toString()), today)
       );
 
       const pendingReqs = requests.filter(

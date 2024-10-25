@@ -7,9 +7,9 @@ import { useState } from 'react';
 
 // import { Playlist } from "../data/playlists";
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
-  // playlists: Playlist[];
-}
+type SidebarProps = {
+  className?: string;
+};
 
 export function MobileSidebar({ className }: SidebarProps) {
   const [open, setOpen] = useState(false);

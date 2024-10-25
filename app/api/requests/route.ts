@@ -102,24 +102,41 @@ export async function POST(request: Request) {
     // Validate the request body as an array of requests
     const validatedData = requestArraySchema.parse(body);
 
-    // Create a new request for each item in the array
-    const newRequests = await Promise.all(
+    // Use a transaction to ensure both request and log creation succeed
+    const results = await Promise.all(
       validatedData.map(async (requestData) => {
-        return prisma.requests.create({
-          data: {
-            staff_id: requestData.staff_id,
-            timeslot: requestData.timeslot,
-            date: new Date(requestData.date), // Convert string to Date object
-            reason: requestData.reason,
-            status: requestData.status,
-            document_url: requestData.document_url,
-            processor_id: requestData.processor_id
-          }
+        return prisma.$transaction(async (prisma) => {
+          // Create the request
+          const newRequest = await prisma.requests.create({
+            data: {
+              staff_id: requestData.staff_id,
+              timeslot: requestData.timeslot,
+              date: new Date(requestData.date),
+              reason: requestData.reason,
+              status: requestData.status,
+              document_url: requestData.document_url,
+              processor_id: requestData.processor_id
+            }
+          });
+
+          // Create the corresponding log entry
+          const newLog = await prisma.logs.create({
+            data: {
+              staff_id: requestData.staff_id,
+              request_id: newRequest.request_id,
+              processor_id: requestData.staff_id, // processor is the staff making the request
+              reason: requestData.reason,
+              action: 'request',
+              created_at: new Date()
+            }
+          });
+
+          return { request: newRequest, log: newLog };
         });
       })
     );
 
-    return NextResponse.json(newRequests, { status: 201 });
+    return NextResponse.json(results, { status: 201 });
   } catch (error) {
     console.error('Error processing request:', error);
 

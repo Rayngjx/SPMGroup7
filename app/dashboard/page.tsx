@@ -1,14 +1,9 @@
 import { CalendarDateRangePicker } from '@/components/date-range-picker';
 import PageContainer from '@/components/layout/page-container';
-
 import { Button } from '@/components/ui/button';
-import { db } from '@/lib/db';
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
 import WFHCalendar from '@/components/dashboard/overviewcalendar/overviewcalendar';
 import { auth } from '@/auth';
-
 import CreateRequestForm from '@/components/forms/create-request/wfh-request';
 
 export default async function page() {
