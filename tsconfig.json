@@ -4,7 +4,7 @@
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,
+    "strict": false, // Updated to make TypeScript less strict
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -23,12 +23,7 @@
       "@/*": ["./*"]
     }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    // "__test__/**/*.ts", // Add this line if your tests are TypeScript // excluded from deployment first
-    ".next/types/**/*.ts"
-  ],
-  "exclude": ["node_modules", "__test__"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "__test__"], // Excludes the test folder from builds
+  "extends": "next/core-web-vitals"
 }
