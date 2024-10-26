@@ -17,11 +17,11 @@ import { getUserById } from '@/services/user';
 import { response } from '@/lib/utils';
 
 export const login = async (payload: z.infer<typeof loginSchema>) => {
-  // console.log('Login function called with payload:', payload); // Log the incoming payload
+  console.log('Login function called with payload:', payload); // Log the incoming payload
 
   const validatedFields = loginSchema.safeParse(payload);
   if (!validatedFields.success) {
-    // console.log('Validation failed:', validatedFields.error); // Log validation errors
+    console.log('Validation failed:', validatedFields.error); // Log validation errors
     return response(null, 'Invalid fields', 442, new Error('Invalid Fields'));
   }
 
@@ -30,7 +30,7 @@ export const login = async (payload: z.infer<typeof loginSchema>) => {
   // Check if user exists
   const existingUser = await getUserById(Number(staff_id));
   if (!existingUser || !existingUser.staff_id) {
-    // console.log('User not found for staff_id:', staff_id); // Log user not found
+    console.log('User not found for staff_id:', staff_id); // Log user not found
     return response(
       null,
       'Invalid credentials.',
@@ -41,7 +41,7 @@ export const login = async (payload: z.infer<typeof loginSchema>) => {
 
   // Check if the staff_id matches the password (since they're the same)
   if (staff_id.toString() !== password) {
-    // console.log('StaffID does not match the password for staff_id:', staff_id); // Log mismatch
+    console.log('StaffID does not match the password for staff_id:', staff_id); // Log mismatch
     return response(
       null,
       'Invalid credentials.',
@@ -55,16 +55,16 @@ export const login = async (payload: z.infer<typeof loginSchema>) => {
     existingUser.staff_id.toString(),
     password
   )) || { success: false };
-  // console.log('SignIn Result:', signInResult); // Log the sign-in result
+  console.log('SignIn Result:', signInResult); // Log the sign-in result
   if (signInResult.success) {
-    // console.log('Login successful, returning response.'); // Log successful login
+    console.log('Login successful, returning response.'); // Log successful login
     return response(
       { userId: existingUser.staff_id.toString() },
       'User fetched successfully',
       200
     );
   }
-  // console.log('Login failed, returning error response.'); // Log failed login
+  console.log('Login failed, returning error response.'); // Log failed login
   return signInResult; // Return the error response from signInCredentials
 };
 
@@ -89,7 +89,7 @@ export const signInCredentials = async (staff_id: string, password: string) => {
 
     return response({ success: true }); // Sign-in successful
   } catch (error) {
-    // console.error('SignIn error:', error);
+    console.error('SignIn error:', error);
     // Handle different AuthError cases
     if (error instanceof AuthError) {
       switch (error.type) {
