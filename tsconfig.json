@@ -24,6 +24,6 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "__test__"], // Excludes the test folder from builds
-  "extends": "next/core-web-vitals"
+  "exclude": ["node_modules", "__test__"] // Excludes the test folder from builds
+  // "extends": "next/core-web-vitals"
 }
