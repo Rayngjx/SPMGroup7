@@ -35,9 +35,7 @@ const FileValidationSchema = z.object({
   )
 });
 
-export async function GET(
-  request: Request
-): Promise<NextResponse<UploadResponse | ErrorResponse>> {
+export async function GET(request: Request): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
     const requestId = searchParams.get('requestId');
@@ -49,10 +47,16 @@ export async function GET(
       );
     }
 
-    const requestRecord = await db.requests.findUnique({
-      where: { request_id: parseInt(requestId) },
-      select: { document_url: true }
-    });
+    let requestRecord;
+    try {
+      requestRecord = await db.requests.findUnique({
+        where: { request_id: parseInt(requestId) },
+        select: { document_url: true }
+      });
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
 
     if (!requestRecord?.document_url) {
       return NextResponse.json(
@@ -61,7 +65,7 @@ export async function GET(
       );
     }
 
-    const { data, error } = supabase.storage
+    const { data, error } = await supabase.storage
       .from('testbucket')
       .getPublicUrl(requestRecord.document_url);
 
@@ -78,16 +82,15 @@ export async function GET(
 
     return NextResponse.json({ url: data.publicUrl });
   } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : 'Internal Server Error';
-    // console.error('Unexpected error:', err);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    console.error('Unexpected error:', err);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(
-  request: Request
-): Promise<NextResponse<UploadResponse | ErrorResponse>> {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
     const formData = await request.formData();
     const file = formData.get('document') as File;
@@ -96,7 +99,7 @@ export async function POST(
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Validate file using the schema
+    // Validate file
     try {
       FileValidationSchema.parse({
         size: file.size,
@@ -111,17 +114,12 @@ export async function POST(
       }
     }
 
-    // console.log('File details:', {
-    //   name: file.name,
-    //   type: file.type,
-    //   size: file.size
-    // });
-
-    // Generate unique filename using timestamp and original name
+    // Generate unique filename
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 8);
     const filename = `${timestamp}-${randomString}_${file.name}`;
 
+    // Upload to Supabase
     const { data, error } = await supabase.storage
       .from('testbucket')
       .upload(filename, file, {
@@ -130,19 +128,20 @@ export async function POST(
       });
 
     if (error) {
-      // console.error('Supabase upload error:', error);
+      console.error('Supabase upload error:', error);
       return NextResponse.json(
         { error: `File upload failed: ${error.message}` },
         { status: 500 }
       );
     }
 
-    const { data: publicUrlData, error: urlError } = supabase.storage
+    // Get public URL
+    const { data: publicUrlData, error: urlError } = await supabase.storage
       .from('testbucket')
       .getPublicUrl(filename);
 
     if (urlError || !publicUrlData?.publicUrl) {
-      // console.error('Error getting public URL:', urlError);
+      console.error('Error getting public URL:', urlError);
       return NextResponse.json(
         {
           error: `Could not get public URL: ${
@@ -153,25 +152,32 @@ export async function POST(
       );
     }
 
-    // Validate response before sending
-    const response = { url: publicUrlData.publicUrl };
-    const validatedResponse = UploadResponseSchema.parse(response);
-
-    return NextResponse.json(validatedResponse);
+    // Validate response
+    try {
+      const response = { url: publicUrlData.publicUrl };
+      const validatedResponse = UploadResponseSchema.parse(response);
+      return NextResponse.json(validatedResponse);
+    } catch (validationError) {
+      return NextResponse.json(
+        { error: 'Invalid response format' },
+        { status: 500 }
+      );
+    }
   } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : 'Internal Server Error';
-    // console.error('Unexpected error in document upload:', err);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    console.error('Unexpected error in document upload:', err);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
-export async function OPTIONS() {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization'
-  };
-
-  return new NextResponse(null, { headers });
+export async function OPTIONS(): Promise<NextResponse> {
+  return new NextResponse(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+  });
 }
