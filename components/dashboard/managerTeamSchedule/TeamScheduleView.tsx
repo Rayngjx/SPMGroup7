@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/popover';
 
 interface TeamMember {
-  id: number;
+  staff_id: number;
   name: string;
   department: string;
   position: string;
@@ -55,7 +55,6 @@ const ManagerTeamScheduleView = () => {
     'all' | 'wfh' | 'office' | 'leave'
   >('all');
   const [selectedStaff, setSelectedStaff] = useState<TeamMember | null>(null);
-  const [dateRange, setDateRange] = useState<'week' | 'month'>('week');
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -74,17 +73,14 @@ const ManagerTeamScheduleView = () => {
       const requestsResponse = await fetch(
         `/api/requests?reportingManager=${managerId}`
       );
-      if (!requestsResponse.ok) {
-        throw new Error('Failed to fetch requests');
-      }
+      if (!requestsResponse.ok) throw new Error('Failed to fetch requests');
       const requests = await requestsResponse.json();
 
       const teamMembersResponse = await fetch(
         `/api/users?reportingManager=${managerId}`
       );
-      if (!teamMembersResponse.ok) {
+      if (!teamMembersResponse.ok)
         throw new Error('Failed to fetch team members');
-      }
       const teamMembersData = await teamMembersResponse.json();
 
       // Combine team members data with their request status
@@ -93,44 +89,49 @@ const ManagerTeamScheduleView = () => {
           (req: any) => req.staff_id === member.staff_id
         );
 
-        const approvedRequests = memberRequests.filter(
-          (req: any) =>
-            req.status === 'approved' || req.status === 'withdraw_pending'
-        );
+        // Get future and today's date for filtering
+        const today = startOfDay(new Date());
 
-        const pendingRequests = memberRequests.filter(
-          (req: any) =>
-            req.status === 'pending' || req.status === 'withdraw_pending'
-        ).length;
-
-        const upcomingWfhDates = approvedRequests
+        // Get approved WFH dates (including withdraw_pending as they're still valid until withdrawn)
+        const approvedWfhDates = memberRequests
           .filter(
             (req: any) =>
-              isAfter(parseISO(req.date), startOfDay(new Date())) ||
-              format(parseISO(req.date), 'yyyy-MM-dd') ===
-                format(new Date(), 'yyyy-MM-dd')
+              (req.status === 'approved' ||
+                req.status === 'withdraw_pending') &&
+              (isAfter(parseISO(req.date), today) ||
+                format(parseISO(req.date), 'yyyy-MM-dd') ===
+                  format(today, 'yyyy-MM-dd'))
           )
           .map((req: any) => req.date);
 
-        const isWeekendDay = isWeekend(date);
-
-        const todayRequest = approvedRequests.find(
+        // Count pending requests
+        const pendingRequestsCount = memberRequests.filter(
           (req: any) =>
-            format(new Date(req.date), 'yyyy-MM-dd') ===
+            (req.status === 'pending' || req.status === 'withdraw_pending') &&
+            (isAfter(parseISO(req.date), today) ||
+              format(parseISO(req.date), 'yyyy-MM-dd') ===
+                format(today, 'yyyy-MM-dd'))
+        ).length;
+
+        // Determine current status
+        const isWeekendDay = isWeekend(date);
+        const todayRequest = approvedWfhDates.find(
+          (reqDate) =>
+            format(new Date(reqDate), 'yyyy-MM-dd') ===
             format(date, 'yyyy-MM-dd')
         );
 
         return {
-          id: member.staff_id,
+          staff_id: member.staff_id,
           name: `${member.staff_fname} ${member.staff_lname}`,
           department: member.department,
           position: member.position,
           status: isWeekendDay ? 'Weekend' : todayRequest ? 'WFH' : 'Office',
-          upcomingWfhDates,
-          pendingRequests
+          upcomingWfhDates: approvedWfhDates,
+          pendingRequests: pendingRequestsCount
         };
       });
-      console.log(teamMembersWithStatus);
+
       setTeamMembers(teamMembersWithStatus);
     } catch (error) {
       console.error('Error fetching team members:', error);
@@ -168,11 +169,7 @@ const ManagerTeamScheduleView = () => {
     const isWeekendDay = isWeekend(date);
 
     if (isWeekendDay) {
-      return {
-        wfhCount: 0,
-        officeCount: 0,
-        onLeaveCount: 0
-      };
+      return { wfhCount: 0, officeCount: 0, onLeaveCount: 0 };
     }
 
     const wfhCount = filteredMembers.filter(
@@ -181,13 +178,8 @@ const ManagerTeamScheduleView = () => {
     const officeCount = filteredMembers.filter(
       (member) => member.status === 'Office'
     ).length;
-    console.log('wfhCount', wfhCount);
-    console.log('officeCount', officeCount);
-    return {
-      wfhCount,
-      officeCount,
-      onLeaveCount: 0 // Placeholder for future leave data
-    };
+
+    return { wfhCount, officeCount, onLeaveCount: 0 };
   };
 
   if (status === 'loading') {
@@ -197,7 +189,6 @@ const ManagerTeamScheduleView = () => {
   const { wfhCount, officeCount, onLeaveCount } = getAggregatedManpower();
 
   return (
-    // <PageContainer scrollable={true}>
     <Card className="w-full min-w-full border-none">
       <CardHeader className="px-6">
         <CardTitle className="flex items-center justify-between">
@@ -252,14 +243,6 @@ const ManagerTeamScheduleView = () => {
         </div>
 
         <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-          {/* <Card>
-              <CardHeader>
-                <CardTitle>Total Team Members</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{teamMembers.length}</p>
-              </CardContent>
-            </Card> */}
           <Card>
             <CardHeader>
               <CardTitle>Working from Home</CardTitle>
@@ -300,19 +283,21 @@ const ManagerTeamScheduleView = () => {
                 <TableHead>Department</TableHead>
                 <TableHead>Position</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Upcoming WFH Days</TableHead>
                 <TableHead>Pending Requests</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredMembers.map((member) => (
-                <TableRow key={member.id}>
+                <TableRow key={member.staff_id}>
                   <TableCell>
                     <Dialog
-                      open={dialogOpen && selectedStaff?.id === member.id}
+                      open={
+                        dialogOpen &&
+                        selectedStaff?.staff_id === member.staff_id
+                      }
                       onOpenChange={(open) => {
-                        if (!open) {
-                          setSelectedStaff(null);
-                        }
+                        if (!open) setSelectedStaff(null);
                         setDialogOpen(open);
                       }}
                     >
@@ -329,7 +314,9 @@ const ManagerTeamScheduleView = () => {
                       </DialogTrigger>
                       <DialogContent className="max-w-3xl">
                         <DialogHeader>
-                          <DialogTitle>{member.name}'s Schedule</DialogTitle>
+                          <DialogTitle>
+                            {member.name}&apos;s Schedule
+                          </DialogTitle>
                         </DialogHeader>
                         <div className="mt-4">
                           <Card>
@@ -362,7 +349,7 @@ const ManagerTeamScheduleView = () => {
                                 </div>
                                 <div>
                                   <p className="text-sm text-gray-500">
-                                    Total WFH Days
+                                    Pending Requests
                                   </p>
                                   <p className="font-medium">
                                     {member.pendingRequests}
@@ -397,6 +384,7 @@ const ManagerTeamScheduleView = () => {
                   <TableCell>{member.position}</TableCell>
                   <TableCell>{member.status}</TableCell>
                   <TableCell>{member.upcomingWfhDates.length}</TableCell>
+                  <TableCell>{member.pendingRequests}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -404,7 +392,6 @@ const ManagerTeamScheduleView = () => {
         </div>
       </CardContent>
     </Card>
-    // </PageContainer>
   );
 };
 
