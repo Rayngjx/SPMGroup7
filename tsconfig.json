@@ -27,8 +27,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "__test__/**/*.ts", // Add this line if your tests are TypeScript
+    // "__test__/**/*.ts", // Add this line if your tests are TypeScript // excluded from deployment first
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "__test__"]
 }
