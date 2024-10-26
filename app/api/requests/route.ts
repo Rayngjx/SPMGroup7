@@ -201,7 +201,6 @@ export async function PUT(request: Request) {
       logAction = 'withdraw';
     } else if (status === 'cancelled') {
       logAction = 'cancel';
-      // Processor ID is set to staff ID when cancelled
     } else {
       throw new Error('Invalid status transition');
     }
