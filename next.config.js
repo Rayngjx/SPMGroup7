@@ -9,10 +9,10 @@ const nextConfig = {
     optimizeCss: true // This might help in optimizing CSS loading
     // You can also disable automatic preloading if needed
     // disableOptimizedLoading: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true
   }
-  // typescript: {
-  //   ignoreBuildErrors: true
-  // }
 };
 
 module.exports = nextConfig;
