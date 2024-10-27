@@ -29,8 +29,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "__test__/**/*.ts"
+    ".next/types/**/*.ts"
+    // "__test__/**/*.ts"
     // "__test__"
   ],
   "exclude": ["node_modules"] // Excludes the test folder from builds
