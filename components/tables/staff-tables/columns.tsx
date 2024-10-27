@@ -30,23 +30,25 @@ export const columns: ColumnDef<users>[] = [
     header: 'Staff ID'
   },
   {
-    accessorKey: 'staff_fname',
-    header: 'First Name'
-  },
-  {
-    accessorKey: 'staff_lname',
-    header: 'Last Name'
+    id: 'fullName', // unique identifier for the column
+    header: 'Full Name',
+    accessorFn: (row) => `${row.staff_fname} ${row.staff_lname}`,
+    cell: ({ row }) => (
+      <div>
+        {row.original.staff_fname} {row.original.staff_lname}
+      </div>
+    )
   },
   {
     accessorKey: 'position',
     header: 'Position'
   },
   {
-    accessorKey: 'dept_id',
-    header: 'Dept'
-  },
-  {
-    id: 'actions',
-    cell: ({ row }) => <CellAction data={row.original} />
+    accessorKey: 'department',
+    header: 'Department'
   }
+  // {
+  //   id: 'actions',
+  //   cell: ({ row }) => <CellAction data={row.original} />
+  // }
 ];
