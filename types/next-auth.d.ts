@@ -11,6 +11,7 @@ declare module 'next-auth' {
     country: string | null;
     email: string;
     reporting_manager: number | null;
+    department: string | null;
     role_id: number | null;
   }
 
@@ -24,6 +25,7 @@ declare module 'next-auth' {
       country: string | null;
       email: string;
       reporting_manager: number | null;
+      department: string | null;
       role_id: number | null; // Add staff_id to Session's user object
     } & DefaultSession['user'];
   }
@@ -37,6 +39,7 @@ declare module 'next-auth' {
     country: string | null;
     email: string;
     reporting_manager: number | null;
+    department: string | null;
     role_id: number | null; // Add staff_id to JWT token
   }
 }

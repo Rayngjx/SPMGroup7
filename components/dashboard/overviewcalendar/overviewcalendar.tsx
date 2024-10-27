@@ -36,6 +36,12 @@ import {
 } from 'lucide-react';
 import { format, isValid, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  checkIfSeniorManagementOrHR,
+  checkIfStaff
+} from '@/app/helper/userService';
+import { auth } from '@/auth';
+import { useSession } from 'next-auth/react';
 
 // import { getApprovedDatesWithUserDetails } from '@/lib/crudFunctions/ApprovedDates';
 // import { getAllUsers, getUser } from '@/lib/crudFunctions/Staff';
@@ -136,6 +142,14 @@ export default function WFHCalendar() {
     processor_id: number;
     reason: string;
   }>([]);
+  const { data: session, status } = useSession();
+
+  if (session?.user?.role_id) {
+    if (session.user.role_id > 2) {
+      return <div> You have no permissions</div>;
+    }
+    console.log('staff id ', session.user);
+  }
 
   useEffect(() => {
     //fixed
@@ -148,15 +162,40 @@ export default function WFHCalendar() {
           throw new Error('Error fetching users');
         }
         const data = await response.json();
-        console.log('Raw response from getting all users:', data);
-        setAllUserDetails(data);
+        // console.log('Raw response from getting all users:', data);
+        // edit filtered data and use it to set departments
+        if (session?.user.role_id == 3) {
+          const filteredData = data.filter(
+            (user: AllUserDetails) =>
+              user.department === session?.user.department
+          );
+          setAllUserDetails(filteredData);
+          const departments = [
+            ...new Set(
+              filteredData.map(
+                (user: AllUserDetails) => session?.user.department
+              )
+            )
+          ];
+          setAllDepartments(departments);
+          setSelectedDepartments(departments);
+        } else {
+          console.log(data);
+          setAllUserDetails(data);
+          const departments = [
+            ...new Set(data.map((user: AllUserDetails) => user.department))
+          ];
+          console.log('departments ', departments);
+          setAllDepartments(departments);
+          setSelectedDepartments(departments);
+        }
+
+        // console.log(filteredData)
 
         // Extract unique department names
-        const departments = [
-          ...new Set(data.map((user: AllUserDetails) => user.department))
-        ];
-        setAllDepartments(departments);
-        setSelectedDepartments(departments);
+        // const departments = [
+        //   ...new Set(filteredData.map((user: AllUserDetails) => session?.user.department))
+        // ];
       } catch (error) {
         console.error('Error:', error);
         setError('Failed to fetch user details. Please try again later.');
@@ -175,7 +214,7 @@ export default function WFHCalendar() {
           throw new Error('Error fetching users');
         }
         const data = await response.json();
-        console.log('Raw response from gettingAllUserDetails:', data);
+        // console.log('Raw response from gettingAllUserDetails:', data);
 
         const formattedData: Employee[] = data
           .map((item: any) => {
@@ -210,7 +249,7 @@ export default function WFHCalendar() {
           })
           .filter(Boolean);
 
-        console.log('Formatted data:', formattedData);
+        // console.log('Formatted data:', formattedData);
 
         setStaffDetails(formattedData);
         updateEvents(formattedData);
@@ -224,13 +263,13 @@ export default function WFHCalendar() {
   }, []);
 
   const updateEvents = (data: Employee[]) => {
-    console.log('Updating events with data:', data);
+    // console.log('Updating events with data:', data);
 
     const filteredData = data.filter((employee) =>
       selectedDepartments.includes(employee.department)
     );
 
-    console.log('Filtered data:', filteredData);
+    // console.log('Filtered data:', filteredData);
 
     const groupedEvents = filteredData.reduce(
       (acc, employee) => {
@@ -244,7 +283,7 @@ export default function WFHCalendar() {
       {} as Record<string, Partial<Record<string, Employee[]>>>
     );
 
-    console.log('Grouped events:', groupedEvents);
+    // console.log('Grouped events:', groupedEvents);
 
     const formattedEvents = Object.entries(groupedEvents).flatMap(
       ([date, departments]) =>
@@ -256,7 +295,7 @@ export default function WFHCalendar() {
         }))
     );
 
-    console.log('Formatted events:', formattedEvents);
+    // console.log('Formatted events:', formattedEvents);
 
     setEvents(formattedEvents);
   };
