@@ -14,7 +14,7 @@
     "format": "prettier . --write",
     "prepare": "husky",
     "test": "NODE_ENV=test jest --env-file=.env.test",
-    "vercel-build": "NEXT_PUBLIC_SKIP_TYPE_CHECK=true && prisma generate && next build"
+    "vercel-build": "NEXT_PUBLIC_SKIP_TYPE_CHECK=true && prisma generate && next build --no-lint"
   },
   "lint-staged": {
     "**/*": [
