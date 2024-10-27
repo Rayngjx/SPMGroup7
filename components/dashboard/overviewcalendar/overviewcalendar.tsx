@@ -400,7 +400,7 @@ export default function WFHCalendar() {
   return (
     <div className="">
       <h1 className="mb-6 text-3xl font-bold">Work From Home Dashboard</h1>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <Card className="shadow-sm lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">

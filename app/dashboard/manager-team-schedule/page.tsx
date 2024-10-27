@@ -17,25 +17,31 @@ export default async function ManagerTeamSchedulePage() {
 
   return (
     <PageContainer scrollable={true}>
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">{name}'s Team</h2>
-        </div>
-        <Tabs defaultValue="schedule">
-          <TabsList>
-            <TabsTrigger value="schedule">Schedule</TabsTrigger>
-            <TabsTrigger value="reqList">Request List</TabsTrigger>
-          </TabsList>
+      <div className="min-w-screen-sm w-full overflow-x-auto">
+        <div className="min-w-screen-sm mx-auto">
+          <div className="flex items-center justify-between space-y-2">
+            <h2 className="p-5 text-3xl font-bold tracking-tight">
+              {name}'s Team
+            </h2>
+          </div>
 
-          <TabsContent value="schedule" className="space-y-4">
-            <div className="w-full">
-              <ManagerTeamScheduleView />
-            </div>
-          </TabsContent>
-          <TabsContent value="reqList" className="space-y-4">
-            <ManagerRequestList />
-          </TabsContent>
-        </Tabs>
+          <Tabs defaultValue="schedule" className="pl-5">
+            <TabsList>
+              <TabsTrigger value="schedule">Schedule</TabsTrigger>
+              <TabsTrigger value="reqList">Request List</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="schedule" className="space-y-4">
+              <div className="overflow-x-auto">
+                <ManagerTeamScheduleView />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="reqList" className="space-y-4">
+              <ManagerRequestList />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </PageContainer>
   );

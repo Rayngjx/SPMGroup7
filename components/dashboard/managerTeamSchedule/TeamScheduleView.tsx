@@ -217,7 +217,7 @@ const ManagerTeamScheduleView = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between ">
           <Input
             placeholder="Filter by name"
             value={nameFilter}
@@ -242,7 +242,7 @@ const ManagerTeamScheduleView = () => {
           </Select>
         </div>
 
-        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3 ">
           <Card>
             <CardHeader>
               <CardTitle>Working from Home</CardTitle>
@@ -275,120 +275,126 @@ const ManagerTeamScheduleView = () => {
           </Card>
         </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Position</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Upcoming WFH Days</TableHead>
-                <TableHead>Pending Requests</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMembers.map((member) => (
-                <TableRow key={member.staff_id}>
-                  <TableCell>
-                    <Dialog
-                      open={
-                        dialogOpen &&
-                        selectedStaff?.staff_id === member.staff_id
-                      }
-                      onOpenChange={(open) => {
-                        if (!open) setSelectedStaff(null);
-                        setDialogOpen(open);
-                      }}
-                    >
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="link"
-                          onClick={() => {
-                            setSelectedStaff(member);
-                            setDialogOpen(true);
-                          }}
-                        >
-                          {member.name}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                          <DialogTitle>
-                            {member.name}&apos;s Schedule
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="mt-4">
-                          <Card>
-                            <CardHeader>
-                              <CardTitle>Employee Details</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-sm text-gray-500">
-                                    Department
-                                  </p>
-                                  <p className="font-medium">
-                                    {member.department}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-gray-500">
-                                    Position
-                                  </p>
-                                  <p className="font-medium">
-                                    {member.position}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-gray-500">
-                                    Current Status
-                                  </p>
-                                  <p className="font-medium">{member.status}</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-gray-500">
-                                    Pending Requests
-                                  </p>
-                                  <p className="font-medium">
-                                    {member.pendingRequests}
-                                  </p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="mt-4">
-                            <CardHeader>
-                              <CardTitle>Upcoming WFH Days</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="grid grid-cols-3 gap-2">
-                                {member.upcomingWfhDates.map((date, index) => (
-                                  <div
-                                    key={index}
-                                    className="rounded-md bg-gray-100 p-2"
-                                  >
-                                    {format(new Date(date), 'PPP')}
-                                  </div>
-                                ))}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                  <TableCell>{member.department}</TableCell>
-                  <TableCell>{member.position}</TableCell>
-                  <TableCell>{member.status}</TableCell>
-                  <TableCell>{member.upcomingWfhDates.length}</TableCell>
-                  <TableCell>{member.pendingRequests}</TableCell>
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[576px]">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Upcoming WFH Days</TableHead>
+                  <TableHead>Pending Requests</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredMembers.map((member) => (
+                  <TableRow key={member.staff_id}>
+                    <TableCell>
+                      <Dialog
+                        open={
+                          dialogOpen &&
+                          selectedStaff?.staff_id === member.staff_id
+                        }
+                        onOpenChange={(open) => {
+                          if (!open) setSelectedStaff(null);
+                          setDialogOpen(open);
+                        }}
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="link"
+                            onClick={() => {
+                              setSelectedStaff(member);
+                              setDialogOpen(true);
+                            }}
+                          >
+                            {member.name}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>
+                              {member.name}&apos;s Schedule
+                            </DialogTitle>
+                          </DialogHeader>
+                          <div className="mt-4">
+                            <Card>
+                              <CardHeader>
+                                <CardTitle>Employee Details</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-sm text-gray-500">
+                                      Department
+                                    </p>
+                                    <p className="font-medium">
+                                      {member.department}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-500">
+                                      Position
+                                    </p>
+                                    <p className="font-medium">
+                                      {member.position}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-500">
+                                      Current Status
+                                    </p>
+                                    <p className="font-medium">
+                                      {member.status}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-500">
+                                      Pending Requests
+                                    </p>
+                                    <p className="font-medium">
+                                      {member.pendingRequests}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="mt-4">
+                              <CardHeader>
+                                <CardTitle>Upcoming WFH Days</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {member.upcomingWfhDates.map(
+                                    (date, index) => (
+                                      <div
+                                        key={index}
+                                        className="rounded-md bg-gray-100 p-2"
+                                      >
+                                        {format(new Date(date), 'PPP')}
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                    <TableCell>{member.department}</TableCell>
+                    <TableCell>{member.position}</TableCell>
+                    <TableCell>{member.status}</TableCell>
+                    <TableCell>{member.upcomingWfhDates.length}</TableCell>
+                    <TableCell>{member.pendingRequests}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </CardContent>
     </Card>
