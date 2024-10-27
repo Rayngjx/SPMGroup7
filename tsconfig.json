@@ -33,5 +33,5 @@
     // "__test__/**/*.ts"
     // "__test__"
   ],
-  "exclude": ["node_modules"] // Excludes the test folder from builds
+  "exclude": ["node_modules", "__test__"] // Excludes the test folder from builds
 }
