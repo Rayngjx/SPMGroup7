@@ -4,8 +4,8 @@
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": false, // Updated to make TypeScript less strict
-    "alwaysStrict": false,
+    "strict": true, // Updated to make TypeScript less strict
+    "alwaysStrict": true,
 
     "noEmit": true,
     "esModuleInterop": true,
@@ -25,7 +25,12 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "__test__"] // Excludes the test folder from builds
-  // "extends": "next/core-web-vitals"
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "__test__"
+  ],
+  "exclude": ["node_modules"] // Excludes the test folder from builds
 }
