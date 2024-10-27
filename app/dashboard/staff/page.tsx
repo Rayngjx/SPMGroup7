@@ -13,9 +13,12 @@ const breadcrumbItems = [
 
 export default async function page() {
   let getUsers;
+  let getRequests;
   try {
-    let data = await fetch('http://localhost:3000/api/users/all');
+    let data = await fetch('http://localhost:3000/api/users');
     getUsers = await data.json();
+    let request_data = await fetch('http://localhost:3000/api/requests');
+    getRequests = await request_data.json();
   } catch (error) {
     console.error(error);
   }
@@ -27,13 +30,13 @@ export default async function page() {
   return (
     <PageContainer>
       {
-        // This is a conditional rendering of the page title
+        // This is a conditional rendering of the page
         session?.user?.role_id === 1 ? (
           <>
             <h1 className="text-3xl font-semibold">View Staff Dashboard</h1>
             <div className="space-y-2">
               <Breadcrumbs items={breadcrumbItems} />
-              <UserClient data={getUsers} />
+              <UserClient user_data={getUsers} request_data={getRequests} />
             </div>
           </>
         ) : (
