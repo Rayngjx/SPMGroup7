@@ -84,7 +84,7 @@ export default function CreateRequestForm() {
       if (session?.user?.staff_id) {
         try {
           const response = await fetch(
-            `/api/requests?staffId=${session.user.staff_id}`
+            `/api/requests?staff_id=${session.user.staff_id}`
           );
           if (response.ok) {
             const requests = await response.json();

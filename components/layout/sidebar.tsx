@@ -5,11 +5,11 @@ import { DashboardNav } from '@/components/dashboard-nav';
 import {
   getAuthorizedNavItems,
   UserRole,
-  UserDepartment
+  UserPosition
 } from '@/constants/data';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, LogOut } from 'lucide-react';
-import { useSidebar } from '@/hooks/useSidebar';
+import { useNormalSidebar } from '@/hooks/UseNormalSideBar'; // New hook
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -19,19 +19,19 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ className }: SidebarProps) {
-  const { isMinimized, toggle } = useSidebar();
+  const { isMinimized, toggle } = useNormalSidebar(); // Use the new hook
   const { data: session } = useSession();
 
   const userRole = session?.user?.role_id as UserRole;
-  const userDepartment = session?.user?.department as UserDepartment;
+  const userPosition = session?.user?.position as UserPosition;
 
   // Filter out the logout item from nav items
   const navItemsWithoutLogout = getAuthorizedNavItems({
     role: userRole,
-    department: userDepartment
+    position: userPosition
   });
 
-  const handleToggle = () => {
+  const handleSidebarToggle = () => {
     toggle();
   };
 
@@ -47,7 +47,7 @@ export default function Sidebar({ className }: SidebarProps) {
         className
       )}
     >
-      <div className="hidden p-5 pt-10 lg:block">
+      <div className="hidden p-5 pt-10">
         <Link href={'/dashboard'}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -68,7 +68,7 @@ export default function Sidebar({ className }: SidebarProps) {
           'absolute -right-3 top-10 z-50 cursor-pointer rounded-full border bg-background text-3xl text-foreground',
           isMinimized && 'rotate-180'
         )}
-        onClick={handleToggle}
+        onClick={handleSidebarToggle}
       />
       <div className="flex h-full flex-col justify-between py-4">
         <div className="px-3 py-2">

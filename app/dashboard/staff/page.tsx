@@ -41,7 +41,9 @@ export default async function page() {
           </>
         ) : (
           <>
-            <h1 className="text-3xl font-semibold">Staff Dashboard</h1>
+            <h1 className="text-xl font-semibold sm:text-3xl">
+              Staff Dashboard
+            </h1>
             <p>Access Denied</p>
           </>
         )

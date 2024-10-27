@@ -102,24 +102,41 @@ export async function POST(request: Request) {
     // Validate the request body as an array of requests
     const validatedData = requestArraySchema.parse(body);
 
-    // Create a new request for each item in the array
-    const newRequests = await Promise.all(
+    // Use a transaction to ensure both request and log creation succeed
+    const results = await Promise.all(
       validatedData.map(async (requestData) => {
-        return prisma.requests.create({
-          data: {
-            staff_id: requestData.staff_id,
-            timeslot: requestData.timeslot,
-            date: new Date(requestData.date), // Convert string to Date object
-            reason: requestData.reason,
-            status: requestData.status,
-            document_url: requestData.document_url,
-            processor_id: requestData.processor_id
-          }
+        return prisma.$transaction(async (prisma) => {
+          // Create the request
+          const newRequest = await prisma.requests.create({
+            data: {
+              staff_id: requestData.staff_id,
+              timeslot: requestData.timeslot,
+              date: new Date(requestData.date),
+              reason: requestData.reason,
+              status: requestData.status,
+              document_url: requestData.document_url,
+              processor_id: requestData.processor_id
+            }
+          });
+
+          // Create the corresponding log entry
+          const newLog = await prisma.logs.create({
+            data: {
+              staff_id: requestData.staff_id,
+              request_id: newRequest.request_id,
+              processor_id: requestData.staff_id, // processor is the staff making the request
+              reason: requestData.reason,
+              action: 'request',
+              created_at: new Date()
+            }
+          });
+
+          return { request: newRequest, log: newLog };
         });
       })
     );
 
-    return NextResponse.json(newRequests, { status: 201 });
+    return NextResponse.json(results, { status: 201 });
   } catch (error) {
     console.error('Error processing request:', error);
 
@@ -139,7 +156,8 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   const body = await request.json();
-  const { request_id, status, reason, processor_id } = body;
+  console.log(body);
+  const { request_id, status, reason, processor_id, new_date } = body;
 
   // Start a transaction
   const result = await prisma.$transaction(async (prisma) => {
@@ -152,7 +170,53 @@ export async function PUT(request: Request) {
       throw new Error('Request not found');
     }
 
-    // Jon added: to overwrite status if the request is already approved
+    // Handle date change for pending requests
+    if (new_date && currentRequest.status === 'pending') {
+      // Check if the new date is available
+      const existingRequest = await prisma.requests.findFirst({
+        where: {
+          staff_id: currentRequest.staff_id,
+          date: new Date(new_date),
+          status: {
+            in: ['pending', 'approved', 'withdraw_pending']
+          },
+          request_id: {
+            not: parseInt(request_id) // Exclude current request
+          }
+        }
+      });
+      console.log(existingRequest);
+      // if (existingRequest) {
+      //   throw new Error('Date not available');
+      // }
+
+      // Update the request with new date
+      const updatedRequest = await prisma.requests.update({
+        where: { request_id: parseInt(request_id) },
+        data: {
+          date: new Date(new_date),
+          last_updated: new Date()
+        }
+      });
+
+      // Create a log entry for date change
+      const newLog = await prisma.logs.create({
+        data: {
+          staff_id: currentRequest.staff_id,
+          request_id: parseInt(request_id),
+          processor_id: currentRequest.staff_id,
+          reason: `Date changed from ${
+            currentRequest.date.toISOString().split('T')[0]
+          } to ${new_date}`,
+          action: 'change_date',
+          created_at: new Date()
+        }
+      });
+
+      return { updatedRequest, newLog };
+    }
+
+    // Handle status changes
     const { searchParams } = new URL(request.url);
     const reportingManager = searchParams.get('reportingManager');
 
@@ -182,9 +246,11 @@ export async function PUT(request: Request) {
       logAction = 'cancel';
     } else if (status === 'withdraw_pending') {
       logAction = 'withdraw';
-    } else if (status === 'cancelled') {
+    } else if (
+      currentRequest.status === 'withdraw_pending' &&
+      status === 'approved'
+    ) {
       logAction = 'cancel';
-      // Processor ID is set to staff ID when cancelled
     } else {
       throw new Error('Invalid status transition');
     }
@@ -192,7 +258,10 @@ export async function PUT(request: Request) {
     // Update the request
     const updatedRequest = await prisma.requests.update({
       where: { request_id: parseInt(request_id) },
-      data: { status, last_updated: new Date() }
+      data: {
+        status,
+        last_updated: new Date()
+      }
     });
 
     // Create a log entry

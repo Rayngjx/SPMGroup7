@@ -28,12 +28,21 @@ import { format, parseISO } from 'date-fns';
 import { requests } from '@prisma/client';
 import { ArrowUpDown, Plus } from 'lucide-react';
 import CreateRequestForm from '@/components/forms/create-request/wfh-request';
+import RequestActions from './request-actions-dropdown';
+import { useSession } from 'next-auth/react';
 
 interface RequestListProps {
   requests: requests[];
+  onCancelRequest?: (requestId: number) => Promise<void>;
+  onWithdrawRequest?: (requestId: number, reason: string) => Promise<void>;
 }
 
-export default function RequestList({ requests }: RequestListProps) {
+export default function RequestList({
+  requests,
+  onCancelRequest,
+  onWithdrawRequest
+}: RequestListProps) {
+  const { data: session } = useSession();
   const [processedRequests, setProcessedRequests] = useState<
     (requests & { processorName?: string })[]
   >([]);
@@ -155,10 +164,20 @@ export default function RequestList({ requests }: RequestListProps) {
     });
   };
 
+  const refreshRequests = async () => {
+    if (session?.user?.staff_id) {
+      const response = await fetch(
+        `/api/requests?staff_id=${session.user.staff_id}`
+      );
+      if (response.ok) {
+        const newRequests = await response.json();
+        setProcessedRequests(newRequests);
+      }
+    }
+  };
+
   return (
     <Card className="h-[calc(100vh-100px)]">
-      {' '}
-      {/* Adjust the height as needed */}
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>All Requests</CardTitle>
         <Dialog>
@@ -176,11 +195,7 @@ export default function RequestList({ requests }: RequestListProps) {
         </Dialog>
       </CardHeader>
       <CardContent className="p-0">
-        {' '}
-        {/* Remove default padding */}
         <div className="mb-4 flex space-x-4 p-4">
-          {' '}
-          {/* Add padding to the filter section */}
           <Select
             onValueChange={(value) =>
               setFilters((prev) => ({ ...prev, type: value }))
@@ -213,11 +228,11 @@ export default function RequestList({ requests }: RequestListProps) {
             </SelectContent>
           </Select>
         </div>
-        <div className="max-h-[calc(100vh-250px)] overflow-auto">
-          {' '}
-          {/* Scrollable area */}
+        {/* Scrollable area */}
+        <div className="relative max-h-[calc(100vh-300px)] overflow-auto">
           <Table>
-            <TableHeader>
+            {/* Sticky Table Header */}
+            <TableHeader className="sticky top-0 bg-white shadow">
               <TableRow>
                 <TableHead onClick={() => sortData('status')}>
                   Type{' '}
@@ -246,8 +261,10 @@ export default function RequestList({ requests }: RequestListProps) {
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   )}
                 </TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
+            {/* Table Body */}
             <TableBody>
               {getFilteredData().map((request) => (
                 <TableRow key={request.request_id}>
@@ -281,6 +298,18 @@ export default function RequestList({ requests }: RequestListProps) {
                     <Badge className={getStatusColor(request.status)}>
                       {request.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <RequestActions
+                      request={request}
+                      onCancelRequest={
+                        onCancelRequest || (() => Promise.resolve())
+                      }
+                      onWithdrawRequest={
+                        onWithdrawRequest || (() => Promise.resolve())
+                      }
+                      refreshRequests={refreshRequests}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
