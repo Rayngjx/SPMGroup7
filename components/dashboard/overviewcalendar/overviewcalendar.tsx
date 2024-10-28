@@ -71,18 +71,6 @@ interface Employee {
   timeslot: string;
   document_url: string;
 }
-// staff_id: item.staff_id,
-//               request_id: item.request_id,
-//               date: format(parsedDate, 'yyyy-MM-dd'),
-//               staff_fname: item.users.staff_fname,
-//               staff_lname: item.users.staff_lname,
-//               department: item.users.department,
-//               position: item.users.position,
-//               email: item.users.email,
-//               reason: item.reason,
-//               status: item.status,
-//               timeslot: item.timeslot,
-//               document_url: item.document_url
 
 interface AllUserDetails {
   staff_id: number;
@@ -148,7 +136,6 @@ export default function WFHCalendar() {
     if (session.user.role_id > 2) {
       return <div> You have no permissions</div>;
     }
-    console.log('staff id ', session.user);
   }
 
   useEffect(() => {
@@ -162,7 +149,6 @@ export default function WFHCalendar() {
           throw new Error('Error fetching users');
         }
         const data = await response.json();
-        // console.log('Raw response from getting all users:', data);
         // edit filtered data and use it to set departments
         if (session?.user.role_id == 3) {
           const filteredData = data.filter(
@@ -180,22 +166,13 @@ export default function WFHCalendar() {
           setAllDepartments(departments);
           setSelectedDepartments(departments);
         } else {
-          console.log(data);
           setAllUserDetails(data);
           const departments = [
             ...new Set(data.map((user: AllUserDetails) => user.department))
           ];
-          console.log('departments ', departments);
           setAllDepartments(departments);
           setSelectedDepartments(departments);
         }
-
-        // console.log(filteredData)
-
-        // Extract unique department names
-        // const departments = [
-        //   ...new Set(filteredData.map((user: AllUserDetails) => session?.user.department))
-        // ];
       } catch (error) {
         console.error('Error:', error);
         setError('Failed to fetch user details. Please try again later.');
@@ -214,7 +191,6 @@ export default function WFHCalendar() {
           throw new Error('Error fetching users');
         }
         const data = await response.json();
-        // console.log('Raw response from gettingAllUserDetails:', data);
 
         const formattedData: Employee[] = data
           .map((item: any) => {
@@ -432,6 +408,12 @@ export default function WFHCalendar() {
   );
   const totalInOffice = totalEmployees - totalWFH;
 
+  const totalOnLeave = allUserDetails.filter(
+    (employee) =>
+      selectedDepartments.includes(employee.department) &&
+      !filteredData.some((staff) => staff.staff_id === employee.staff_id)
+  ).length;
+
   if (error) {
     return <div className="text-red-500">{error}</div>;
   }
@@ -534,6 +516,11 @@ export default function WFHCalendar() {
                 <span className="text-sm font-medium">Total in Office:</span>
                 <span className="text-sm font-medium">{totalInOffice}</span>
               </div>
+              <div className="mb-4 flex items-center justify-between">
+                {/* Added this section for leave, but logic and const totalOnLeave not declared */}
+                <span className="text-sm font-medium">Total on Leave:</span>
+                <span className="text-sm font-medium">{totalOnLeave}</span>
+              </div>
               <div className="my-4 h-px bg-border"></div>
               {allDepartments.map((dept) => {
                 const wfhCount = filteredData.filter(
@@ -545,7 +532,7 @@ export default function WFHCalendar() {
                     <span className="text-sm font-medium">{dept}</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-muted-foreground">
-                        {wfhCount} / {totalInDepartment}
+                        {totalInDepartment - wfhCount} / {totalInDepartment}
                       </span>
                       <div className="h-1.5 w-24 rounded-full bg-secondary">
                         <div
@@ -554,7 +541,9 @@ export default function WFHCalendar() {
                           }`}
                           style={{
                             width: `${
-                              (wfhCount / (totalInDepartment || 1)) * 100
+                              ((totalInDepartment - wfhCount) /
+                                (totalInDepartment || 1)) *
+                              100
                             }%`
                           }}
                         ></div>

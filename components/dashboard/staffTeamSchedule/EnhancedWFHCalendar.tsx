@@ -26,6 +26,7 @@ interface Staff {
   wfhDates: string[];
   pendingDates: string[];
   withdrawPendingDates: string[];
+  leaveDates: string[];
   reporting_manager: string;
   role_id: number;
 }
@@ -34,6 +35,7 @@ interface DayStatus {
   wfh: Staff[];
   inOffice: Staff[];
   pending: Staff[];
+  leave: Staff[];
   withdrawPending: Staff[];
 }
 
@@ -144,6 +146,7 @@ export default function TeamScheduleCalendar({
     wfh: [],
     inOffice: [],
     pending: [],
+    leave: [],
     withdrawPending: []
   });
   const [calendarView, setCalendarView] =
@@ -159,6 +162,7 @@ export default function TeamScheduleCalendar({
           wfh: [],
           inOffice: [],
           pending: [],
+          leave: [],
           withdrawPending: []
         });
         return;
@@ -180,6 +184,12 @@ export default function TeamScheduleCalendar({
         )
       );
 
+      const leave = staffData.filter((staff) =>
+        staff.leaveDates.some((leaveDate) =>
+          isSameDay(new Date(leaveDate), date)
+        )
+      );
+
       // Everyone not WFH, pending, or withdraw pending is in office
       const inOffice = staffData.filter(
         (staff) =>
@@ -191,10 +201,13 @@ export default function TeamScheduleCalendar({
           ) &&
           !staff.withdrawPendingDates.some((withdrawDate) =>
             isSameDay(new Date(withdrawDate), date)
+          ) &&
+          !staff.leaveDates.some((leaveDate) =>
+            isSameDay(new Date(leaveDate), date)
           )
       );
 
-      setDayStatus({ wfh, inOffice, pending, withdrawPending });
+      setDayStatus({ wfh, inOffice, leave, pending, withdrawPending });
     },
     [staffData]
   );
@@ -396,6 +409,33 @@ export default function TeamScheduleCalendar({
                           )}
                         </div>
                       ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-medium">On Leave</h3>
+                    <span className="text-sm text-gray-500">
+                      {dayStatus.leave.length} staff
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {dayStatus.leave.map((staff) => (
+                      <div
+                        key={staff.id}
+                        className="flex items-center justify-between py-2"
+                      >
+                        <div>
+                          <div className="font-medium">{staff.name}</div>
+                          <div className="text-sm text-gray-500">
+                            {staff.position}
+                          </div>
+                        </div>
+                        <span className="rounded bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
+                          Leave
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

@@ -19,6 +19,7 @@ interface ProcessedStaffMember {
   wfhDates: string[];
   pendingDates: string[];
   withdrawPendingDates: string[];
+  leaveDates: string[];
   reporting_manager: string;
   role_id: number;
 }
@@ -60,6 +61,9 @@ async function fetchTeamData(reportingManagerId: number) {
         .map((req: any) => req.date),
       withdrawPendingDates: staffRequests
         .filter((req: any) => req.status === 'withdraw_pending')
+        .map((req: any) => req.date),
+      leaveDates: staffRequests
+        .filter((req: any) => req.status === 'leave')
         .map((req: any) => req.date),
       reporting_manager: staff.reporting_manager,
       role_id: staff.role_id
