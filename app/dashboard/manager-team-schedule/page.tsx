@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Session } from 'next-auth';
 import { auth } from '@/auth';
 import ManagerRequestList from '@/components/dashboard/managerTeamSchedule/manager-request-list';
+import DelegationRequests from '@/components/dashboard/managerTeamSchedule/delegation-requests';
 
 export const metadata: Metadata = {
   title: 'Manager Team Schedule | Dashboard',
@@ -29,6 +30,7 @@ export default async function ManagerTeamSchedulePage() {
             <TabsList>
               <TabsTrigger value="schedule">Schedule</TabsTrigger>
               <TabsTrigger value="reqList">Request List</TabsTrigger>
+              <TabsTrigger value="deleReq">Delegation Requests</TabsTrigger>
             </TabsList>
 
             <TabsContent value="schedule" className="space-y-4">
@@ -39,6 +41,10 @@ export default async function ManagerTeamSchedulePage() {
 
             <TabsContent value="reqList" className="space-y-4">
               <ManagerRequestList />
+            </TabsContent>
+
+            <TabsContent value="deleReq" className="space-y-4">
+              <DelegationRequests />
             </TabsContent>
           </Tabs>
         </div>

@@ -26,7 +26,10 @@ const ACCEPTED_FILE_TYPES = [
   'image/jpeg',
   'image/png',
   'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/x-pdf',
+  'application/acrobat',
+  'applications/vnd.pdf'
 ];
 
 const ACCEPTED_FILE_EXTENSIONS = [

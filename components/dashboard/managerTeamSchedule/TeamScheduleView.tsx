@@ -116,7 +116,7 @@ const ManagerTeamScheduleView = () => {
         // Determine current status
         const isWeekendDay = isWeekend(date);
         const todayRequest = approvedWfhDates.find(
-          (reqDate) =>
+          (reqDate: string) =>
             format(new Date(reqDate), 'yyyy-MM-dd') ===
             format(date, 'yyyy-MM-dd')
         );
