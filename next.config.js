@@ -11,7 +11,7 @@ const nextConfig = {
     // disableOptimizedLoading: true,
   },
   typescript: {
-    ignoreBuildErrors: true
+    ignoreBuildErrors: true // ray
   }
 };
 
