@@ -10,7 +10,7 @@ datasource db {
 
 model delegation_requests {
   delegation_request                            Int       @id @default(autoincrement())
-  staff_id                                      Int
+  staff_id                                      Int?
   delegated_to                                  Int?
   status                                        String    @db.VarChar(20)
   created_at                                    DateTime? @default(now()) @db.Timestamptz(6)
@@ -21,7 +21,7 @@ model delegation_requests {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model logs {
   log_id                         Int      @id @default(autoincrement())
-  staff_id                       Int
+  staff_id                       Int?
   request_id                     Int
   processor_id                   Int?
   reason                         String?
@@ -34,7 +34,7 @@ model logs {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model requests {
   request_id   Int       @id @default(autoincrement())
-  staff_id     Int
+  staff_id     Int?
   timeslot     String?   @db.VarChar(20)
   date         DateTime  @db.Date
   reason       String?
@@ -74,7 +74,6 @@ model users {
   other_users                                                 users[]               @relation("usersTousers")
   role                                                        role                  @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
 }
-
 
 model logs_dele {
   log_id                              Int      @id @default(autoincrement())

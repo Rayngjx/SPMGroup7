@@ -36,15 +36,7 @@ import {
 } from 'lucide-react';
 import { format, isValid, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-import {
-  checkIfSeniorManagementOrHR,
-  checkIfStaff
-} from '@/app/helper/userService';
-import { auth } from '@/auth';
 import { useSession } from 'next-auth/react';
-
-// import { getApprovedDatesWithUserDetails } from '@/lib/crudFunctions/ApprovedDates';
-// import { getAllUsers, getUser } from '@/lib/crudFunctions/Staff';
 
 const departmentColors: Record<string, string> = {
   'Human Resources': 'bg-blue-600',
@@ -67,7 +59,7 @@ interface Employee {
   position: string;
   email: string;
   reason: string;
-  status: string;
+  status: 'approved' | 'leave';
   timeslot: string;
   document_url: string;
 }
@@ -88,7 +80,8 @@ const allColumns = [
   { key: 'name', label: 'Name' },
   { key: 'department', label: 'Department' },
   { key: 'position', label: 'Position' },
-  { key: 'reason', label: 'Reason' }
+  { key: 'reason', label: 'Reason' },
+  { key: 'status', label: 'Status' }
 ] as const;
 
 type ColumnKey = (typeof allColumns)[number]['key'];
@@ -125,31 +118,23 @@ export default function WFHCalendar() {
   const [currentWfhPage, setCurrentWfhPage] = useState(1);
   const [currentPresentPage, setCurrentPresentPage] = useState(1);
   const employeesPerPage = 10;
-  const [logs, setLogs] = useState<{
-    staff_id: number;
-    processor_id: number;
-    reason: string;
-  }>([]);
   const { data: session, status } = useSession();
 
   if (session?.user?.role_id) {
     if (session.user.role_id > 2) {
-      return <div> You have no permissions</div>;
+      return <div>You have no permissions</div>;
     }
   }
 
   useEffect(() => {
-    //fixed
     const fetchAllUserDetails = async () => {
       try {
-        // const response = await getAllUsers();
         let response = await fetch(`/api/users/`);
 
-        if (!response) {
+        if (!response.ok) {
           throw new Error('Error fetching users');
         }
         const data = await response.json();
-        // edit filtered data and use it to set departments
         if (session?.user.role_id == 3) {
           const filteredData = data.filter(
             (user: AllUserDetails) =>
@@ -185,16 +170,18 @@ export default function WFHCalendar() {
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        // const response = await getApprovedDatesWithUserDetails();
         const response = await fetch(`/api/requests/`);
-        if (!response) {
-          throw new Error('Error fetching users');
+        if (!response.ok) {
+          throw new Error('Error fetching requests');
         }
         const data = await response.json();
 
         const formattedData: Employee[] = data
           .map((item: any) => {
-            if (item.status == 'approved') {
+            if (item.status == 'approved' || item.status == 'leave') {
+              if (item.status == 'leave') {
+                console.log('leave spotted ', item);
+              }
               let parsedDate;
               try {
                 parsedDate = new Date(item.date);
@@ -225,13 +212,11 @@ export default function WFHCalendar() {
           })
           .filter(Boolean);
 
-        // console.log('Formatted data:', formattedData);
-
         setStaffDetails(formattedData);
         updateEvents(formattedData);
       } catch (error) {
         console.error('Error:', error);
-        setError('Failed to fetch user details. Please try again later.');
+        setError('Failed to fetch request details. Please try again later.');
       }
     };
 
@@ -239,13 +224,9 @@ export default function WFHCalendar() {
   }, []);
 
   const updateEvents = (data: Employee[]) => {
-    // console.log('Updating events with data:', data);
-
     const filteredData = data.filter((employee) =>
       selectedDepartments.includes(employee.department)
     );
-
-    // console.log('Filtered data:', filteredData);
 
     const groupedEvents = filteredData.reduce(
       (acc, employee) => {
@@ -259,8 +240,6 @@ export default function WFHCalendar() {
       {} as Record<string, Partial<Record<string, Employee[]>>>
     );
 
-    // console.log('Grouped events:', groupedEvents);
-
     const formattedEvents = Object.entries(groupedEvents).flatMap(
       ([date, departments]) =>
         Object.entries(departments).map(([department, employees]) => ({
@@ -270,8 +249,6 @@ export default function WFHCalendar() {
           extendedProps: { department, employees }
         }))
     );
-
-    // console.log('Formatted events:', formattedEvents);
 
     setEvents(formattedEvents);
   };
@@ -292,18 +269,20 @@ export default function WFHCalendar() {
 
   const getPresentEmployees = (date: Date, department: string) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const wfhEmployees = new Set(
+    const absentEmployees = new Set(
       staffDetails
         .filter(
           (employee) =>
-            employee.date === dateStr && employee.department === department
+            employee.date === dateStr &&
+            employee.department === department &&
+            (employee.status === 'approved' || employee.status === 'leave')
         )
         .map((employee) => employee.staff_id)
     );
 
     return allUserDetails.filter(
       (employee) =>
-        !wfhEmployees.has(employee.staff_id) &&
+        !absentEmployees.has(employee.staff_id) &&
         employee.department === department
     );
   };
@@ -401,18 +380,17 @@ export default function WFHCalendar() {
     );
   }, [allUserDetails, allDepartments]);
 
-  const totalWFH = filteredData.length;
+  const totalWFH = filteredData.filter(
+    (employee) => employee.status === 'approved'
+  ).length;
+  const totalOnLeave = filteredData.filter(
+    (employee) => employee.status === 'leave'
+  ).length;
   const totalEmployees = selectedDepartments.reduce(
     (sum, dept) => sum + (departmentCounts[dept] || 0),
     0
   );
-  const totalInOffice = totalEmployees - totalWFH;
-
-  const totalOnLeave = allUserDetails.filter(
-    (employee) =>
-      selectedDepartments.includes(employee.department) &&
-      !filteredData.some((staff) => staff.staff_id === employee.staff_id)
-  ).length;
+  const totalInOffice = totalEmployees - totalWFH - totalOnLeave;
 
   if (error) {
     return <div className="text-red-500">{error}</div>;
@@ -517,22 +495,27 @@ export default function WFHCalendar() {
                 <span className="text-sm font-medium">{totalInOffice}</span>
               </div>
               <div className="mb-4 flex items-center justify-between">
-                {/* Added this section for leave, but logic and const totalOnLeave not declared */}
                 <span className="text-sm font-medium">Total on Leave:</span>
                 <span className="text-sm font-medium">{totalOnLeave}</span>
               </div>
               <div className="my-4 h-px bg-border"></div>
               {allDepartments.map((dept) => {
                 const wfhCount = filteredData.filter(
-                  (staff) => staff.department === dept
+                  (staff) =>
+                    staff.department === dept && staff.status === 'approved'
+                ).length;
+                const leaveCount = filteredData.filter(
+                  (staff) =>
+                    staff.department === dept && staff.status === 'leave'
                 ).length;
                 const totalInDepartment = departmentCounts[dept] || 0;
+                const inOfficeCount = totalInDepartment - wfhCount - leaveCount;
                 return (
                   <div key={dept} className="flex items-center justify-between">
                     <span className="text-sm font-medium">{dept}</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-muted-foreground">
-                        {totalInDepartment - wfhCount} / {totalInDepartment}
+                        {inOfficeCount} / {totalInDepartment}
                       </span>
                       <div className="h-1.5 w-24 rounded-full bg-secondary">
                         <div
@@ -541,9 +524,7 @@ export default function WFHCalendar() {
                           }`}
                           style={{
                             width: `${
-                              ((totalInDepartment - wfhCount) /
-                                (totalInDepartment || 1)) *
-                              100
+                              (inOfficeCount / (totalInDepartment || 1)) * 100
                             }%`
                           }}
                         ></div>
@@ -673,7 +654,7 @@ export default function WFHCalendar() {
           <div className="mt-4 space-y-6">
             <div>
               <h3 className="mb-2 text-lg font-semibold">
-                Employees Working From Home
+                Employees Working From Home or on Leave
               </h3>
               <Table>
                 <TableHeader>
@@ -842,7 +823,7 @@ export default function WFHCalendar() {
                 <p>{selectedEmployee.reason}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium">WFH Date</h3>
+                <h3 className="text-sm font-medium">Date</h3>
                 <p>{selectedEmployee.date}</p>
               </div>
               <div>
