@@ -1,198 +1,166 @@
-import { db } from '@/lib/db';
-import { GET, PUT, DELETE } from '@/app/api/roles/[roleId]/route';
-import { NextRequest, NextResponse } from 'next/server';
+import {
+  describe,
+  expect,
+  test,
+  beforeAll,
+  afterAll,
+  beforeEach
+} from '@jest/globals';
+import { NextResponse } from 'next/server';
 
-describe('Integration Test for GET /api/roles/:roleId', () => {
-  let testRoleId: number;
+// Define mock data
+const mockRole = {
+  role_id: 1,
+  role_title: 'Test Role'
+};
 
-  beforeAll(async () => {
-    console.log('Database URL:', process.env.DATABASE_URL);
-    await db.$connect();
-    await db.users.deleteMany();
+const mockUpdatedRole = {
+  role_id: 1,
+  role_title: 'Updated Test Role'
+};
 
-    // Seed the database with a test role, let Prisma auto-generate the role_id
-    const role = await db.role.create({
-      data: {
-        role_title: 'Test Role' // Do not specify ifrole_id
-      }
-    });
-    testRoleId = role.role_id; // Capture the generated role_id
+// Mock NextResponse
+// jest.mock('next/server', () => ({
+//   NextResponse: {
+//     json: jest.fn().mockImplementation((data, options) => ({
+//       json: () => Promise.resolve(data),
+//       headers: new Headers(options?.headers || {}),
+//       ...options
+//     }))
+//   }
+// }));
+jest.mock('next/server', () => ({
+  NextResponse: {
+    json: jest.fn().mockImplementation((data, options) => {
+      const headers = new Headers(options?.headers || {});
+      return {
+        json: () => Promise.resolve(data),
+        headers,
+        status: options?.status || 200
+      };
+    })
+  }
+}));
+
+// Create mock Prisma instance
+const mockPrismaInstance = {
+  role: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn()
+  },
+  $connect: jest.fn(),
+  $disconnect: jest.fn()
+};
+
+// Mock PrismaClient constructor
+jest.mock('@prisma/client', () => ({
+  PrismaClient: jest.fn(() => mockPrismaInstance)
+}));
+
+// Import routes after mocks are set up
+import * as roleRoutes from '@/app/api/roles/route';
+
+describe('Roles API', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Setup default mock implementations
+    mockPrismaInstance.role.findMany.mockResolvedValue([mockRole]);
+    mockPrismaInstance.role.create.mockResolvedValue(mockRole);
+    mockPrismaInstance.role.update.mockResolvedValue(mockUpdatedRole);
+    mockPrismaInstance.role.delete.mockResolvedValue(mockRole);
   });
 
-  afterAll(async () => {
-    // Clean up users associated with the role first
-    await db.users.deleteMany({
-      where: { role_id: testRoleId }
+  describe('GET /api/roles', () => {
+    test('should return all roles', async () => {
+      const response = await roleRoutes.GET();
+      const data = await response.json();
+
+      expect(data).toEqual([mockRole]);
+      expect(mockPrismaInstance.role.findMany).toHaveBeenCalledTimes(1);
     });
 
-    // Clean up the role
-    await db.role.deleteMany({
-      where: { role_id: testRoleId }
+    test('should handle database errors', async () => {
+      mockPrismaInstance.role.findMany.mockRejectedValue(new Error('DB Error'));
+
+      const response = await roleRoutes.GET();
+      const data = await response.json();
+
+      expect(data).toEqual({ error: 'Failed to fetch roles' });
+    });
+  });
+
+  describe('POST /api/roles', () => {
+    test('should create a new role', async () => {
+      const request = new Request('http://localhost/api/roles', {
+        method: 'POST',
+        body: JSON.stringify(mockRole)
+      });
+
+      const response = await roleRoutes.POST(request);
+      const data = await response.json();
+
+      expect(data).toEqual(mockRole);
+      expect(mockPrismaInstance.role.create).toHaveBeenCalledWith({
+        data: mockRole
+      });
+    });
+  });
+
+  describe('PUT /api/roles', () => {
+    test('should update an existing role', async () => {
+      const request = new Request('http://localhost/api/roles', {
+        method: 'PUT',
+        body: JSON.stringify(mockUpdatedRole)
+      });
+
+      const response = await roleRoutes.PUT(request);
+      const data = await response.json();
+
+      expect(data).toEqual(mockUpdatedRole);
+      expect(mockPrismaInstance.role.update).toHaveBeenCalledWith({
+        where: { role_id: mockUpdatedRole.role_id },
+        data: { role_title: mockUpdatedRole.role_title }
+      });
+    });
+  });
+
+  describe('DELETE /api/roles', () => {
+    test('should delete a role', async () => {
+      const url = new URL('http://localhost/api/roles');
+      url.searchParams.set('role_id', mockRole.role_id.toString());
+
+      const request = new Request(url);
+      const response = await roleRoutes.DELETE(request);
+      const data = await response.json();
+
+      expect(data).toEqual(mockRole);
+      expect(mockPrismaInstance.role.delete).toHaveBeenCalledWith({
+        where: { role_id: mockRole.role_id }
+      });
     });
 
-    await db.$disconnect();
-  });
+    test('should handle missing role_id', async () => {
+      const request = new Request('http://localhost/api/roles');
+      const response = await roleRoutes.DELETE(request);
+      const data = await response.json();
 
-  it('should return a role by role_id (200)', async () => {
-    const req = new NextRequest(`http://localhost/api/roles/${testRoleId}`);
-    const response = await GET(req, {
-      params: { roleId: testRoleId.toString() }
+      expect(data).toEqual({ error: 'Role ID is required' });
     });
-    const jsonResponse = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(jsonResponse.role_id).toBe(testRoleId);
-    expect(jsonResponse.role_title).toBe('Test Role');
   });
 
-  it('should return 404 if role not found', async () => {
-    const req = new NextRequest(`http://localhost/api/roles/999999`);
-    const response = await GET(req, { params: { roleId: '999999' } });
-    const jsonResponse = await response.json();
+  describe('OPTIONS /api/roles', () => {
+    test('should return correct CORS headers', async () => {
+      const response = await roleRoutes.OPTIONS();
 
-    expect(response.status).toBe(404);
-    expect(jsonResponse.error).toBe('Role not found');
-  });
-
-  it('should return 400 if roleId is invalid', async () => {
-    const req = new NextRequest(`http://localhost/api/roles/abc`);
-    const response = await GET(req, { params: { roleId: 'abc' } });
-    const jsonResponse = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(jsonResponse.error).toBe('Invalid roleId');
-
-    //     it('should return 404 if role not found', async () => {
-    //       const req = createRequest({
-    //         method: 'GET',
-    //         url: '/api/roles/99999',
-    //         params: { roleId: '99999' }
-    //       });
-    //       const res = createResponse();
-
-    //       // Call the API handler
-    //       await GET(req as unknown as Request, { params: { roleId: '99999' } });
-
-    //       // Ensure the response is finalized
-    //       res.end();
-
-    //       const jsonResponse = res._getJSONData();
-    //       expect(res.statusCode).toBe(404);
-    //       expect(jsonResponse.error).toBe('Role not found');
-    //     });
-
-    //     it('should return 400 for invalid roleId', async () => {
-    //       const req = createRequest({
-    //         method: 'GET',
-    //         url: '/api/roles/invalid',
-    //         params: { roleId: 'invalid' }
-    //       });
-    //       const res = createResponse();
-
-    //       // Call the API handler
-    //       await GET(req as unknown as Request, { params: { roleId: 'invalid' } });
-
-    //       // Ensure the response is finalized
-    //       res.end();
-
-    //       const jsonResponse = res._getJSONData();
-    //       expect(res.statusCode).toBe(400);
-    //       expect(jsonResponse.error).toBe('Invalid roleId');
-    //     });
-    //   });
-    // });
-
-    // describe('PUT /api/roles/:roleId', () => {
-    //   let testRoleId: number;
-
-    //   it('should update a role', async () => {
-    //     const req = createRequest({
-    //       method: 'PUT',
-    //       url: `/api/roles/${testRoleId}`,
-    //       params: { roleId: testRoleId.toString() },
-    //       body: { role_title: 'Updated Test Role' }
-    //     });
-    //     const res = createResponse();
-
-    //     await PUT(req as unknown as Request, { params: { roleId: testRoleId.toString() } });
-
-    //     res.end();
-
-    //     const jsonResponse = res._getJSONData();
-    //     expect(res.statusCode).toBe(200);
-    //     expect(jsonResponse.success).toBe(true);
-    //   });
-
-    //   it('should return 400 for invalid roleId', async () => {
-    //     const req = createRequest({
-    //       method: 'PUT',
-    //       url: '/api/roles/invalid',
-    //       params: { roleId: 'invalid' },
-    //       body: { role_title: 'Invalid Role' }
-    //     });
-    //     const res = createResponse();
-
-    //     await PUT(req as unknown as Request, { params: { roleId: 'invalid' } });
-
-    //     res.end();
-
-    //     const jsonResponse = res._getJSONData();
-    //     expect(res.statusCode).toBe(400);
-    //     expect(jsonResponse.error).toBe('Invalid roleId');
-    //   });
-    // });
-
-    //   describe('DELETE /api/roles/:roleId', () => {
-    //     it('should delete an existing role', async () => {
-    //       // First, create a role to delete
-    //       const newRole = await db.role.create({
-    //         data: { role_title: 'Role to Delete' }
-    //       });
-
-    //       const req = createRequest({
-    //         method: 'DELETE',
-    //         url: `/api/roles/${newRole.role_id}`,
-    //         params: { roleId: newRole.role_id.toString() }
-    //       });
-    //       const res = createResponse();
-
-    //       await DELETE(req as unknown as Request, { params: { roleId: newRole.role_id.toString() } });
-    //       res.end();
-
-    //       const jsonResponse = res._getJSONData();
-    //       expect(res.statusCode).toBe(200);
-    //       expect(jsonResponse.success).toBe(true);
-    //     });
-
-    //     it('should return 404 for a non-existent role', async () => {
-    //       const req = createRequest({
-    //         method: 'DELETE',
-    //         url: '/api/roles/99999',
-    //         params: { roleId: '99999' }
-    //       });
-    //       const res = createResponse();
-
-    //       await DELETE(req as unknown as Request, { params: { roleId: '99999' } });
-    //       res.end();
-
-    //       const jsonResponse = res._getJSONData();
-    //       expect(res.statusCode).toBe(400);
-    //       expect(jsonResponse.error).toBe('Failed to delete role!');
-    //     });
-
-    //     it('should return 400 for invalid roleId', async () => {
-    //       const req = createRequest({
-    //         method: 'DELETE',
-    //         url: '/api/roles/invalid',
-    //         params: { roleId: 'invalid' }
-    //       });
-    //       const res = createResponse();
-
-    //       await DELETE(req as unknown as Request, { params: { roleId: 'invalid' } });
-    //       res.end();
-
-    //       const jsonResponse = res._getJSONData();
-    //       expect(res.statusCode).toBe(400);
-    //       expect(jsonResponse.error).toBe('Invalid roleId');
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+      expect(response.headers.get('Access-Control-Allow-Methods')).toBe(
+        'GET,POST,OPTIONS'
+      );
+      expect(response.headers.get('Access-Control-Allow-Headers')).toBe(
+        'Content-Type,Authorization'
+      );
+    });
   });
 });
