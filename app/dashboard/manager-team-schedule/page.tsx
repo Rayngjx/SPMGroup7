@@ -18,7 +18,7 @@ export default async function ManagerTeamSchedulePage() {
 
   return (
     <PageContainer scrollable={true}>
-      <div className="min-w-screen-sm w-full overflow-x-auto">
+      <div className="min-w-screen-sm w-full overflow-x-auto pl-10 pt-5">
         <div className="min-w-screen-sm mx-auto">
           <div className="flex items-center justify-between space-y-2">
             <h2 className="p-5 text-3xl font-bold tracking-tight">

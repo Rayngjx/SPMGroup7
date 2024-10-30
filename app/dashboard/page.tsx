@@ -186,7 +186,7 @@ export default function Page() {
 
   return (
     <PageContainer scrollable={true}>
-      <div className="space-y-2">
+      <div className="space-y-2 p-10">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-2xl font-bold tracking-tight">
             Hi, Welcome back {position}, {staff_fname} {staffId}
