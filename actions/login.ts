@@ -3,17 +3,8 @@
 import { signIn } from '@/auth';
 import { loginSchema } from '@/schemas';
 import { z } from 'zod';
-// import { DEFAULT_LOGIN_REDIRECT } from '@/routes';
 import { AuthError } from 'next-auth';
 import { getUserById } from '@/services/user';
-// // import bcrypt from "bcryptjs";
-// import { generateTwoFactorToken } from '@/services/two-factor-token';
-// import { sendTwoFactorEmail } from '@/services/mail';
-// import { cookies } from 'next/headers';
-// import {
-//   getTwoFactorConfirmationByUserId,
-//   deleteTwoFactorConfirmationById
-// } from '@/services/two-factor-confirmation';
 import { response } from '@/lib/utils';
 
 export const login = async (payload: z.infer<typeof loginSchema>) => {
@@ -78,65 +69,64 @@ export const signInCredentials = async (staff_id: string, password: string) => {
     });
 
     if (result?.error) {
-      return response({
-        success: false,
-        error: {
-          code: 401,
-          message: 'Invalid credentials.'
-        }
-      });
+      return response(
+        null,
+        'Invalid credentials.',
+        401,
+        new Error('Invalid credentials.')
+      );
     }
 
-    return response({ success: true }); // Sign-in successful
+    return response({ success: true }, 'Sign-in successful', 200); // Sign-in successful
   } catch (error) {
     console.error('SignIn error:', error);
     // Handle different AuthError cases
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case 'CredentialsSignin':
-          return response({
-            success: false,
-            error: {
-              code: 401,
-              message: 'Invalid credentials.'
-            }
-          });
-        case 'OAuthAccountNotLinked':
-          return response({
-            success: false,
-            error: {
-              code: 403,
-              message:
-                'Another account already registered with the same Email Address.'
-            }
-          });
-        case 'Verification':
-          return response({
-            success: false,
-            error: {
-              code: 422,
-              message: 'Verification failed. Please try again.'
-            }
-          });
-        case 'AuthorizedCallbackError':
-          return response({
-            success: false,
-            error: {
-              code: 422,
-              message: 'Authorization failed. Please try again.'
-            }
-          });
-        default:
-          return response({
-            success: false,
-            error: {
-              code: 500,
-              message: 'Something went wrong.'
-            }
-          });
-      }
-    }
+    // if (error instanceof AuthError) {
+    //   switch (error.type) {
+    //     case 'CredentialsSignin':
+    //       return response({
+    //         success: false,
+    //         error: {
+    //           code: 401,
+    //           message: 'Invalid credentials.'
+    //         }
+    //       });
+    //     case 'OAuthAccountNotLinked':
+    //       return response({
+    //         success: false,
+    //         error: {
+    //           code: 403,
+    //           message:
+    //             'Another account already registered with the same Email Address.'
+    //         }
+    //       });
+    //     case 'Verification':
+    //       return response({
+    //         success: false,
+    //         error: {
+    //           code: 422,
+    //           message: 'Verification failed. Please try again.'
+    //         }
+    //       });
+    //     case 'AuthorizedCallbackError':
+    //       return response({
+    //         success: false,
+    //         error: {
+    //           code: 422,
+    //           message: 'Authorization failed. Please try again.'
+    //         }
+    //       });
+    //     default:
+    //       return response({
+    //         success: false,
+    //         error: {
+    //           code: 500,
+    //           message: 'Something went wrong.'
+    //         }
+    //       });
+    //   }
+    // }
 
-    throw error;
+    // throw error;
   }
 };

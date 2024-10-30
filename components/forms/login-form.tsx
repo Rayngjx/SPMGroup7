@@ -31,7 +31,7 @@ export const LoginForm = () => {
     startTransition(() => {
       login(values)
         .then((data) => {
-          console.log('HELLO Login response:', data); // Log the entire response
+          // Log the entire response
           if (!data) return toast.error('No response from server.');
           if (!data.success) {
             if ('error' in data && data.error) {
@@ -40,9 +40,18 @@ export const LoginForm = () => {
             return toast.error('An unknown error occurred');
           }
           // Redirect to dashboard on successful login
-          signIn('credentials', { redirect: false }).then(() => {
-            // Redirect to dashboard on successful login
-            router.push('/dashboard');
+          signIn('credentials', {
+            staff_id: values.staff_id,
+            password: values.password,
+            redirect: false
+          }).then((result) => {
+            if (result && result.ok) {
+              // Redirect to dashboard on successful login
+              router.push('/dashboard');
+            } else {
+              // Handle errors
+              toast.error('Invalid credentials');
+            }
           });
         })
         .catch((error) => {
@@ -56,8 +65,6 @@ export const LoginForm = () => {
     <CardWrapper
       headerTitle="Login"
       headerDescription="Welcome back! Please fill out the form below before logging in to the website."
-      backButtonLabel="Don't have an account? Register"
-      backButtonHref="/register"
       // showSocial
     >
       <Form {...form}>

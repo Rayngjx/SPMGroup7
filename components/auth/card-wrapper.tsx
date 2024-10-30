@@ -26,8 +26,6 @@ export const CardWrapper = (props: CardWrapperProps) => {
     heroImage,
     headerTitle,
     headerDescription,
-    backButtonLabel,
-    backButtonHref,
     // showSocial,
     children,
     ...rest
@@ -64,11 +62,6 @@ export const CardWrapper = (props: CardWrapperProps) => {
         </>
       ) : null} */}
       <Separator />
-      <CardFooter className="py-3">
-        <Button variant="link" className="w-full font-normal" size="sm" asChild>
-          <Link href={backButtonHref}>{backButtonLabel}</Link>
-        </Button>
-      </CardFooter>
     </Card>
   );
 };

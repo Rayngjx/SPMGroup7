@@ -1,23 +1,22 @@
 import { NextAuthConfig } from 'next-auth';
-import CredentialProvider from 'next-auth/providers/credentials';
-import GithubProvider from 'next-auth/providers/github';
+import CredentialProvider from '@auth/core/providers/credentials';
 import { getUserById } from '@/services/user';
 
 export const authConfig = {
   debug: true,
   providers: [
-    GithubProvider({
-      clientId: process.env.GITHUB_ID ?? '',
-      clientSecret: process.env.GITHUB_SECRET ?? ''
-    }),
     CredentialProvider({
       name: 'Credentials',
       credentials: {
         staff_id: { label: 'Staff ID', type: 'number' },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials, req) {
+      async authorize(
+        credentials: Partial<Record<string, unknown>>,
+        req: Request
+      ) {
         const user = await getUserById(Number(credentials.staff_id));
+        console.log(user);
         const { staff_id, password } = credentials;
         console.log('User found:', user); // Log user for debugging
         if (!user) {
@@ -36,6 +35,7 @@ export const authConfig = {
       }
     })
   ],
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

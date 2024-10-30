@@ -1,23 +1,25 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
-  preset: 'ts-jest',
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1' // This matches your path alias configuration
-  },
-  testMatch: [
-    '**/__test__/**/*.test.ts', // This ensures Jest looks in the __test__ folder
-    '**/*.test.ts' // Looks for colocated test files
-  ],
+  setupFiles: ['<rootDir>/jest.setup.js'],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest'
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        useESM: true,
+        tsconfig: 'tsconfig.jest.json'
+      }
+    ],
+    '^.+\\.jsx?$': 'babel-jest'
   },
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
-
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.jest.json'
-    }
-  }
+  transformIgnorePatterns: [
+    '/node_modules/(?!(next-auth|@auth|oauth4webapi)/)' // Transpile specified modules
+  ],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1' // Adjust path alias if needed
+  },
+  extensionsToTreatAsEsm: ['.ts', '.tsx'], // Treat TypeScript as ESM
+  testMatch: ['**/__tests__/**/*.test.ts', '**/*.test.ts'],
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/']
 };
