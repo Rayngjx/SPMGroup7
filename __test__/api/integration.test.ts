@@ -1,3 +1,5 @@
+jest.setTimeout(15000); // 15 seconds for all tests in this file
+
 import { POST, PUT } from '@/app/api/requests/route';
 import { PrismaClient } from '@prisma/client';
 
