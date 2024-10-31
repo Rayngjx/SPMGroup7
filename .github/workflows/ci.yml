@@ -50,7 +50,6 @@ jobs:
             -Dsonar.projectKey=SPMGroup7Key
             -Dsonar.organization=rayngjx
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.exclusions=__test__/**,tests/**,test/**
 
   # build-and-test:
   #   runs-on: ubuntu-latest
@@ -107,3 +106,6 @@ jobs:
   #       with:
   #         name: code-coverage
   #         path: coverage
+
+#            -Dsonar.exclusions=__test__/**,tests/**,test/**
+
