@@ -3,10 +3,10 @@ name: CI Workflow
 on:
   push:
     branches:
-      - rayTest
+      - unittest_v1
   pull_request:
     branches:
-      - rayTest
+      - unittest_v1
 
 jobs:
   sonarcloud:
@@ -17,14 +17,16 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install dependencies
-        run: yarn
+        run: npm install
       - name: Test and coverage
-        run: yarn jest --coverage
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm test -- --coverage
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
-          SONAR_TOKEN: ${{ secrets. SONARCLOUD_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets. GIT_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
         with:
           args: >
             -Dsonar.projectKey=SPMGroup7Key
