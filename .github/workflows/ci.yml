@@ -25,7 +25,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm test -- --coverage
 
-      # Test upload coverage
+      # Upload coverage report
       - name: Upload Coverage
         if: success()
         uses: actions/upload-artifact@v3
@@ -33,7 +33,7 @@ jobs:
           name: code-coverage
           path: coverage
 
-      # USe vcoverage for SonarCLoud
+      # Download coverage artifact for SonarCloud
       - name: Download Coverage Artifact
         uses: actions/download-artifact@v3
         with:
@@ -50,6 +50,18 @@ jobs:
             -Dsonar.projectKey=SPMGroup7Key
             -Dsonar.organization=rayngjx
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+      # Check SonarCloud Quality Gate Status
+      - name: Check Quality Gate
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+        run: |
+          status=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=SPMGroup7Key" | jq -r .projectStatus.status)
+          echo "Quality Gate status: $status"
+          if [ "$status" != "OK" ]; then
+            echo "Quality Gate failed"
+            exit 1
+          fi
 
   # build-and-test:
   #   runs-on: ubuntu-latest
