@@ -17,82 +17,95 @@ const singleRequestSchema = z.object({
 const requestArraySchema = z.array(singleRequestSchema);
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const staff_id = searchParams.get('staff_id');
-  const reportingManager = searchParams.get('reportingManager');
-  const department = searchParams.get('department');
-  const requestId = searchParams.get('requestId');
+  try {
+    const { searchParams } = new URL(request.url);
+    const staff_id = searchParams.get('staff_id');
+    const reportingManager = searchParams.get('reportingManager');
+    const department = searchParams.get('department');
+    const requestId = searchParams.get('requestId');
 
-  let requests;
-  if (requestId) {
-    const specificRequest = await prisma.requests.findUnique({
-      where: { request_id: parseInt(requestId) },
-      include: {
-        users: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true,
-            email: true
+    let requests;
+    if (requestId) {
+      const specificRequest = await prisma.requests.findUnique({
+        where: { request_id: parseInt(requestId) },
+        include: {
+          users: {
+            select: {
+              staff_fname: true,
+              staff_lname: true,
+              department: true,
+              position: true,
+              email: true
+            }
           }
         }
+      });
+
+      if (!specificRequest) {
+        throw new Error('Request not found');
       }
-    });
-    return NextResponse.json(specificRequest);
-  } else if (staff_id) {
-    requests = await prisma.requests.findMany({
-      where: { staff_id: parseInt(staff_id) }
-    });
-  } else if (reportingManager) {
-    const staffIds = await prisma.users.findMany({
-      where: { reporting_manager: parseInt(reportingManager) },
-      select: { staff_id: true }
-    });
-    requests = await prisma.requests.findMany({
-      where: { staff_id: { in: staffIds.map((user) => user.staff_id) } }
-    });
-  } else if (department) {
-    const staffIds = await prisma.users.findMany({
-      where: { department },
-      select: { staff_id: true }
-    });
-    requests = await prisma.requests.findMany({
-      where: { staff_id: { in: staffIds.map((user) => user.staff_id) } }
-    });
-  } else {
-    requests = await prisma.requests.findMany({
-      select: {
-        staff_id: true
-      }
-    });
-    //
-    requests = await prisma.requests.findMany({
-      select: {
-        staff_id: true,
-        request_id: true,
-        date: true,
-        timeslot: true,
-        reason: true,
-        status: true,
-        document_url: true,
-        created_at: true,
-        last_updated: true,
-        processor_id: true,
-        users: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true,
-            email: true
+
+      return NextResponse.json(specificRequest);
+    } else if (staff_id) {
+      requests = await prisma.requests.findMany({
+        where: { staff_id: parseInt(staff_id) }
+      });
+    } else if (reportingManager) {
+      const staffIds = await prisma.users.findMany({
+        where: { reporting_manager: parseInt(reportingManager) },
+        select: { staff_id: true }
+      });
+      requests = await prisma.requests.findMany({
+        where: { staff_id: { in: staffIds.map((user) => user.staff_id) } }
+      });
+    } else if (department) {
+      const staffIds = await prisma.users.findMany({
+        where: { department },
+        select: { staff_id: true }
+      });
+      requests = await prisma.requests.findMany({
+        where: { staff_id: { in: staffIds.map((user) => user.staff_id) } }
+      });
+    } else {
+      requests = await prisma.requests.findMany({
+        select: {
+          staff_id: true
+        }
+      });
+      //
+      requests = await prisma.requests.findMany({
+        select: {
+          staff_id: true,
+          request_id: true,
+          date: true,
+          timeslot: true,
+          reason: true,
+          status: true,
+          document_url: true,
+          created_at: true,
+          last_updated: true,
+          processor_id: true,
+          users: {
+            select: {
+              staff_fname: true,
+              staff_lname: true,
+              department: true,
+              position: true,
+              email: true
+            }
           }
         }
-      }
-    });
+      });
+    }
+
+    return NextResponse.json(requests);
+  } catch (error) {
+    console.error('Error processing request:', error);
+    return NextResponse.json(
+      { error: 'An error occurred while processing your request' },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(requests);
 }
 
 export async function POST(request: Request) {
@@ -103,9 +116,9 @@ export async function POST(request: Request) {
     const validatedData = requestArraySchema.parse(body);
 
     // Use a transaction to ensure both request and log creation succeed
-    const results = await Promise.all(
-      validatedData.map(async (requestData) => {
-        return prisma.$transaction(async (prisma) => {
+    const results = await prisma.$transaction(async (prisma) => {
+      return Promise.all(
+        validatedData.map(async (requestData) => {
           // Create the request
           const newRequest = await prisma.requests.create({
             data: {
@@ -123,7 +136,7 @@ export async function POST(request: Request) {
           const newLog = await prisma.logs.create({
             data: {
               staff_id: requestData.staff_id,
-              request_id: newRequest.request_id,
+              request_id: newRequest.request_id, // Ensure newRequest is defined
               processor_id: requestData.staff_id, // processor is the staff making the request
               reason: requestData.reason,
               action: 'request',
@@ -132,9 +145,9 @@ export async function POST(request: Request) {
           });
 
           return { request: newRequest, log: newLog };
-        });
-      })
-    );
+        })
+      );
+    });
 
     return NextResponse.json(results, { status: 201 });
   } catch (error) {
