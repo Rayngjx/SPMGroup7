@@ -9,14 +9,13 @@ datasource db {
 }
 
 model delegation_requests {
-  delegation_request                            Int        @id @default(autoincrement())
+  delegation_request                            Int       @id @default(autoincrement())
   staff_id                                      Int?
   delegated_to                                  Int?
-  status                                        String?    @db.VarChar(20)
-  date_range                                    DateTime[] @db.Date
-  created_at                                    DateTime?  @default(now()) @db.Timestamptz(6)
-  users_delegation_requests_delegated_toTousers users?     @relation("delegation_requests_delegated_toTousers", fields: [delegated_to], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
-  users_delegation_requests_staff_idTousers     users?     @relation("delegation_requests_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  status                                        String    @db.VarChar(20)
+  created_at                                    DateTime? @default(now()) @db.Timestamptz(6)
+  users_delegation_requests_delegated_toTousers users?    @relation("delegation_requests_delegated_toTousers", fields: [delegated_to], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users_delegation_requests_staff_idTousers     users?    @relation("delegation_requests_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -68,8 +67,28 @@ model users {
   delegation_requests_delegation_requests_staff_idTousers     delegation_requests[] @relation("delegation_requests_staff_idTousers")
   logs_logs_processor_idTousers                               logs[]                @relation("logs_processor_idTousers")
   logs_logs_staff_idTousers                                   logs[]                @relation("logs_staff_idTousers")
+  logs_dele_logs_dele_processor_idTousers                     logs_dele[]           @relation("logs_dele_processor_idTousers")
+  logs_dele_logs_dele_staff_idTousers                         logs_dele[]           @relation("logs_dele_staff_idTousers")
   requests                                                    requests[]
   users                                                       users?                @relation("usersTousers", fields: [reporting_manager], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
   other_users                                                 users[]               @relation("usersTousers")
   role                                                        role                  @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model logs_dele {
+  log_id                              Int      @id @default(autoincrement())
+  staff_id                            Int?
+  delegation_request_id               Int
+  processor_id                        Int?
+  reason                              String?
+  action                              String
+  created_at                          DateTime @default(now()) @db.Date
+  users_logs_dele_processor_idTousers users?   @relation("logs_dele_processor_idTousers", fields: [processor_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users_logs_dele_staff_idTousers     users?   @relation("logs_dele_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_logs_dele_created_at")
+  @@index([delegation_request_id], map: "idx_logs_dele_delegation_request_id")
+  @@index([processor_id], map: "idx_logs_dele_processor_id")
+  @@index([staff_id], map: "idx_logs_dele_staff_id")
 }
