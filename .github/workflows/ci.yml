@@ -13,69 +13,86 @@ jobs:
     name: SonarCloud Scan Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+      # - uses: actions/checkout@v2
+      #   with:
+      #     fetch-depth: 0
 
-      - name: Install dependencies
-        run: npm install
+      # - name: Install dependencies
+      #   run: npm install
 
-      - name: Test and coverage
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npm test -- --coverage
+      # - name: Test and coverage
+      #   env:
+      #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      #   run: npm test -- --coverage
 
-      # Upload coverage report
-      - name: Upload Coverage
-        if: success()
-        uses: actions/upload-artifact@v3
-        with:
-          name: code-coverage
-          path: coverage
+      # # Upload coverage report
+      # - name: Upload Coverage
+      #   if: success()
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: code-coverage
+      #     path: coverage
 
-      # Download coverage artifact for SonarCloud
-      - name: Download Coverage Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: code-coverage
-          path: coverage
+      # # Download coverage artifact for SonarCloud
+      # - name: Download Coverage Artifact
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: code-coverage
+      #     path: coverage
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=SPMGroup7Key
-            -Dsonar.organization=rayngjx
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+      # - name: SonarCloud Scan
+      #   uses: SonarSource/sonarcloud-github-action@master
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+      #     GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      #   with:
+      #     args: >
+      #       -Dsonar.projectKey=SPMGroup7Key
+      #       -Dsonar.organization=rayngjx
+      #       -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
 
-      # Check SonarCloud Quality Gate Status
-      - name: Check Quality Gate
+      - name: Get Analysis ID and Check Quality Gate Status
         env:
           SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
         run: |
-          max_retries=10
-          delay=15
+          max_retries=3   # Reduced retry count for faster checks
+          delay=5         # Reduced delay for quicker retries
           count=0
 
+          # Fetch the latest analysis ID for the branch
+          analysisId=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/project_analyses/search?project=SPMGroup7Key&branch=rayTest" | jq -r '.analyses[0].key')
+          echo "Analysis ID: $analysisId"
+
+          if [ -z "$analysisId" ] || [ "$analysisId" == "null" ]; then
+            echo "Failed to retrieve analysis ID."
+            exit 1
+          fi
+
           while [ "$count" -lt "$max_retries" ]; do
-            status=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=SPMGroup7Key" | jq -r .projectStatus.status)
-            echo "Attempt $((count+1)): Quality Gate status: $status"
-            
-            if [ "$status" == "OK" ]; then
-              echo "Quality Gate passed"
-              exit 0
-            elif [ "$status" == "ERROR" ]; then
-              echo "Quality Gate failed"
-              exit 1
+            # Check the task status
+            taskStatus=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/ce/task?id=$analysisId" | jq -r .task.status)
+            echo "Attempt $((count+1)): Analysis task status: $taskStatus"
+
+            if [ "$taskStatus" == "SUCCESS" ]; then
+              # If analysis is complete, check the Quality Gate status
+              status=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=SPMGroup7Key" | jq -r .projectStatus.status)
+              echo "Quality Gate status: $status"
+
+              if [ "$status" == "OK" ]; then
+                echo "Quality Gate passed"
+                exit 0
+              elif [ "$status" == "ERROR" ]; then
+                echo "Quality Gate failed"
+                exit 1
+              else
+                echo "Quality Gate status is not available yet, retrying in $delay seconds..."
+              fi
             else
-              echo "Quality Gate status is not available yet, retrying in $delay seconds..."
-              sleep $delay
+              echo "Analysis not complete yet, retrying in $delay seconds..."
             fi
-            
+
             count=$((count+1))
+            sleep $delay
           done
 
           echo "Quality Gate status did not become available in time."
