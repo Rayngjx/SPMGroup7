@@ -50,7 +50,7 @@ jobs:
             -Dsonar.projectKey=SPMGroup7Key
             -Dsonar.organization=rayngjx
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.exclusions=__test__/**,tests/**,test/**,jest.config.js,*.config.js,scripts/**,dist/**,build/**,docs/**,public/**
+            -Dsonar.exclusions=__test__/**,tests/**,test/**
 
   # build-and-test:
   #   runs-on: ubuntu-latest
