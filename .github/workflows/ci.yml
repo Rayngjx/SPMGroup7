@@ -3,10 +3,10 @@ name: CI Workflow
 on:
   push:
     branches:
-      - unittest_v1
+      - rayTest
   pull_request:
     branches:
-      - unittest_v1
+      - rayTest
 
 jobs:
   sonarcloud:
