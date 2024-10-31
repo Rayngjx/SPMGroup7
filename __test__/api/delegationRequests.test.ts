@@ -1,6 +1,5 @@
 import { GET, POST, PUT } from '@/app/api/delegation-requests/route';
 import { PrismaClient } from '@prisma/client';
-import { NextResponse } from 'next/server';
 
 // Define types for our mock Prisma client
 type MockPrismaClient = {

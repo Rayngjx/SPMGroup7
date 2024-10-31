@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 // Mock Prisma
 const mockFindUnique = jest.fn();
 const mockFindMany = jest.fn();

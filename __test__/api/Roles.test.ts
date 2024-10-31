@@ -1,12 +1,4 @@
-import {
-  describe,
-  expect,
-  test,
-  beforeAll,
-  afterAll,
-  beforeEach
-} from '@jest/globals';
-import { NextResponse } from 'next/server';
+import { describe, expect, test, beforeEach } from '@jest/globals';
 
 // Define mock data
 const mockRole = {

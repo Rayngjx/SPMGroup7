@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 // First, declare the mock function
 const mockSendEmail = jest.fn();
 
