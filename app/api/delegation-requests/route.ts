@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
@@ -12,119 +11,8 @@ const delegationRequestSchema = z.object({
   status: z.string().default('pending')
 });
 
-const delegationRequestSchema = z.object({
-  staff_id: z.number(),
-  delegated_to: z.number(),
-  reason: z.string(),
-  status: z.string().default('pending')
-});
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const staff_id = searchParams.get('staff_id');
-  const delegated_to = searchParams.get('delegated_to');
-  const delegationRequestId = searchParams.get('delegationRequestId');
-
-  let delegationRequests;
-
-  if (staff_id && delegated_to) {
-    // Get specific request between staff_id and delegated_to
-    delegationRequests = await prisma.delegation_requests.findMany({
-      where: {
-        AND: [
-          { staff_id: parseInt(staff_id) },
-          { delegated_to: parseInt(delegated_to) }
-        ]
-      },
-      include: {
-        users_delegation_requests_staff_idTousers: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true
-          }
-        },
-        users_delegation_requests_delegated_toTousers: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true
-          }
-        }
-      }
-    });
-  } else if (staff_id) {
-    // Get requests made by staff_id
-    delegationRequests = await prisma.delegation_requests.findMany({
-      where: { staff_id: parseInt(staff_id) },
-      include: {
-        users_delegation_requests_staff_idTousers: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true
-          }
-        },
-        users_delegation_requests_delegated_toTousers: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true
-          }
-        }
-      }
-    });
-  } else if (delegated_to) {
-    // Get requests where user is delegated to
-    delegationRequests = await prisma.delegation_requests.findMany({
-      where: { delegated_to: parseInt(delegated_to) },
-      include: {
-        users_delegation_requests_staff_idTousers: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true
-          }
-        },
-        users_delegation_requests_delegated_toTousers: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true
-          }
-        }
-      }
-    });
-  } else if (delegationRequestId) {
-    // Get specific request
-    delegationRequests = await prisma.delegation_requests.findUnique({
-      where: { delegation_request: parseInt(delegationRequestId) },
-      include: {
-        users_delegation_requests_staff_idTousers: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true
-          }
-        },
-        users_delegation_requests_delegated_toTousers: {
-          select: {
-            staff_fname: true,
-            staff_lname: true,
-            department: true,
-            position: true
-          }
-        }
-      }
-    });
-  }
   const staff_id = searchParams.get('staff_id');
   const delegated_to = searchParams.get('delegated_to');
   const delegationRequestId = searchParams.get('delegationRequestId');
