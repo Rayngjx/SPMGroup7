@@ -25,8 +25,12 @@ jobs:
           echo "DATABASE_URL=${{ secrets.TEST_DATABASE_URL }}" >> .env.test
           echo "DIRECT_URL=${{ secrets.TEST_DIRECT_URL }}" >> .env.test
 
+      - name: Set environment variable
+        run: echo "DATABASE_URL=${{ secrets.TEST_DATABASE_URL }}" >> $GITHUB_ENV
+
       - name: Run tests
-        run: npm test
+        run: DATABASE_URL=${{ secrets.TEST_DATABASE_URL }} npm test
+
         # env:
         #   NODE_ENV: test # This tells your app to use .env.test
 
