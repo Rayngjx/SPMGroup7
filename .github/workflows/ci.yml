@@ -24,14 +24,11 @@ jobs:
         run: |
           echo "DATABASE_URL=${{ secrets.TEST_DATABASE_URL }}" >> .env.test
           echo "DIRECT_URL=${{ secrets.TEST_DIRECT_URL }}" >> .env.test
-          echo .env.test
-          echo ${{ secrets.TEST_DATABASE_URL }}
 
       - name: Run tests
         run: npm test
-        env:
-          NODE_ENV: test # This tells your app to use .env.test
-
+        # env:
+        #   NODE_ENV: test # This tells your app to use .env.test
 
   # # deploy:
   #   needs: test  # Only run deploy if tests pass
