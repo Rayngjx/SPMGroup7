@@ -30,7 +30,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-    // "__test__/**/*.ts" // ray
+    // "__test__/**/*.ts" // ray .
     // "__test__"
   ],
   "exclude": ["node_modules", "__test__"] // Excludes the test folder from builds
