@@ -13,7 +13,8 @@
     "lint": "next lint",
     "format": "prettier . --write",
     "prepare": "husky",
-    "test": "cross-env NODE_ENV=test jest --env-file=.env.test"
+    "test": "cross-env NODE_ENV=test jest --env-file=.env.test",
+    "vercel-build": "NEXT_PUBLIC_SKIP_TYPE_CHECK=true && prisma generate && next build --no-lint"
   },
   "lint-staged": {
     "**/*": [
