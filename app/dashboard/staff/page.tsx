@@ -33,8 +33,10 @@ export default async function page() {
         // This is a conditional rendering of the page
         session?.user?.role_id === 1 ? (
           <>
-            <h1 className="text-3xl font-semibold">View Staff Dashboard</h1>
-            <div className="space-y-2">
+            <h1 className="p-10 text-3xl font-semibold">
+              View Staff Dashboard
+            </h1>
+            <div className="space-y-2 pl-10">
               <Breadcrumbs items={breadcrumbItems} />
               <UserClient user_data={getUsers} request_data={getRequests} />
             </div>

@@ -51,7 +51,7 @@ export const UserClient: React.FC<ProductsClientProps> = ({
       return request_data.some(
         (request) =>
           request.staff_id === userId &&
-          ['approved', 'withdraw_pending'].includes(request.status) &&
+          ['leave', 'approved', 'withdraw_pending'].includes(request.status) &&
           format(new Date(request.date), 'yyyy-MM-dd') ===
             format(selectedDate, 'yyyy-MM-dd')
       );
