@@ -176,7 +176,7 @@ export default function Page() {
       <div className="space-y-2">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-2xl font-bold tracking-tight">
-            HELLLO, Welcome back {position}, {staff_fname} {staffId}
+            Hi, Welcome back {position}, {staff_fname} {staffId}
           </h2>
         </div>
 
