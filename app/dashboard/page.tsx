@@ -11,6 +11,7 @@ import WfhDayList from '@/components/dashboard/ownSchedule/wfhDayList';
 import { requests } from '@prisma/client';
 import { parseISO, isAfter, startOfDay } from 'date-fns';
 import { string } from 'zod';
+import LeaveDay from '@/components/dashboard/ownSchedule/leaveDay';
 
 interface CalendarEvent {
   id: string;
@@ -29,6 +30,8 @@ export default function Page() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [pendingRequests, setPendingRequests] = useState<requests[]>([]);
   const [wfhDays, setwfhDays] = useState<requests[]>([]);
+  const [leaveDays, setleaveDays] = useState<requests[]>([]);
+
   const [allRequests, setAllRequests] = useState<requests[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,11 +72,21 @@ export default function Page() {
           isAfter(parseISO(req.date.toString()), today)
       );
 
-      const pendingReqs = requests.filter(
-        (req: requests) =>
-          req.status === 'pending' || req.status === 'withdraw_pending'
+      const pendingReqs = requests
+        .filter(
+          (req: requests) =>
+            req.status === 'pending' || req.status === 'withdraw_pending'
+        )
+        .map((req) => ({
+          ...req,
+          date: req.date.toString() // Convert Date to string
+        }));
+
+      const leaveReqs = requests.filter(
+        (req: requests) => req.status === 'leave'
       );
 
+      setleaveDays(leaveReqs);
       setwfhDays(futureWfhReqs);
       setPendingRequests(pendingReqs);
       setAllRequests(requests);
@@ -173,7 +186,7 @@ export default function Page() {
 
   return (
     <PageContainer scrollable={true}>
-      <div className="space-y-2">
+      <div className="space-y-2 p-10">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-2xl font-bold tracking-tight">
             Hi, Welcome back {position}, {staff_fname} {staffId}
@@ -204,6 +217,7 @@ export default function Page() {
                         requests={wfhDays}
                         onWithdrawRequest={handleWithdrawRequest}
                       />
+                      <LeaveDay requests={leaveDays} />
                     </div>
                   </div>
                 )}

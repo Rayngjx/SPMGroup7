@@ -16,6 +16,10 @@ model delegation_requests {
   created_at                                    DateTime? @default(now()) @db.Timestamptz(6)
   users_delegation_requests_delegated_toTousers users?    @relation("delegation_requests_delegated_toTousers", fields: [delegated_to], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
   users_delegation_requests_staff_idTousers     users?    @relation("delegation_requests_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  status                                        String    @db.VarChar(20)
+  created_at                                    DateTime? @default(now()) @db.Timestamptz(6)
+  users_delegation_requests_delegated_toTousers users?    @relation("delegation_requests_delegated_toTousers", fields: [delegated_to], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
+  users_delegation_requests_staff_idTousers     users?    @relation("delegation_requests_staff_idTousers", fields: [staff_id], references: [staff_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -67,6 +71,8 @@ model users {
   delegation_requests_delegation_requests_staff_idTousers     delegation_requests[] @relation("delegation_requests_staff_idTousers")
   logs_logs_processor_idTousers                               logs[]                @relation("logs_processor_idTousers")
   logs_logs_staff_idTousers                                   logs[]                @relation("logs_staff_idTousers")
+  logs_dele_logs_dele_processor_idTousers                     logs_dele[]           @relation("logs_dele_processor_idTousers")
+  logs_dele_logs_dele_staff_idTousers                         logs_dele[]           @relation("logs_dele_staff_idTousers")
   logs_dele_logs_dele_processor_idTousers                     logs_dele[]           @relation("logs_dele_processor_idTousers")
   logs_dele_logs_dele_staff_idTousers                         logs_dele[]           @relation("logs_dele_staff_idTousers")
   requests                                                    requests[]

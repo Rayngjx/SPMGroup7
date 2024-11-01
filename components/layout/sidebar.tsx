@@ -9,7 +9,7 @@ import {
 } from '@/constants/data';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, LogOut } from 'lucide-react';
-import { useNormalSidebar } from '@/hooks/UseNormalSideBar'; // New hook
+import { useNormalSidebar } from '@/hooks/UseNormalSidebar'; // New hook
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';

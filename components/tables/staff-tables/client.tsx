@@ -33,9 +33,9 @@ export const UserClient: React.FC<ProductsClientProps> = ({
 }) => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [filteredData, setFilteredData] = React.useState(user_data);
-  const [workStatus, setWorkStatus] = React.useState<'all' | 'wfh' | 'office'>(
-    'all'
-  );
+  const [workStatus, setWorkStatus] = React.useState<
+    'all' | 'wfh' | 'office' | 'leave'
+  >('all');
 
   // Extract unique departments
   const departments = React.useMemo(() => {
@@ -51,12 +51,43 @@ export const UserClient: React.FC<ProductsClientProps> = ({
       return request_data.some(
         (request) =>
           request.staff_id === userId &&
-          request.status === 'approved' &&
+          ['leave', 'approved', 'withdraw_pending'].includes(request.status) &&
           format(new Date(request.date), 'yyyy-MM-dd') ===
             format(selectedDate, 'yyyy-MM-dd')
       );
     },
     [request_data]
+  );
+
+  const isUserOnLeave = React.useCallback(
+    (userId: number, selectedDate: Date | undefined) => {
+      if (!selectedDate) return false;
+
+      // Assuming leave data is being passed through request_data with a status of 'leave'
+      return request_data.some(
+        (request) =>
+          request.staff_id === userId &&
+          request.status === 'leave' &&
+          format(new Date(request.date), 'yyyy-MM-dd') ===
+            format(selectedDate, 'yyyy-MM-dd')
+      );
+    },
+    [request_data]
+  );
+
+  const getUserWorkStatus = React.useCallback(
+    (userId: number, selectedDate: Date | undefined) => {
+      if (!selectedDate) return 'In Office';
+
+      const onLeave = isUserOnLeave(userId, selectedDate);
+      if (onLeave) return 'On Leave';
+
+      const onWfh = isUserWFH(userId, selectedDate);
+      if (onWfh) return 'WFH';
+
+      return 'In Office';
+    },
+    [isUserWFH, isUserOnLeave]
   );
 
   // Filter users based on department and WFH status
@@ -69,17 +100,17 @@ export const UserClient: React.FC<ProductsClientProps> = ({
         filtered = filtered.filter((user) => user.department === department);
       }
 
-      // Apply WFH status filter
+      // Apply status filter
       if (workStatus !== 'all') {
         filtered = filtered.filter((user) => {
-          const userWFH = isUserWFH(user.staff_id, date);
-          return workStatus === 'wfh' ? userWFH : !userWFH;
+          const status = getUserWorkStatus(user.staff_id, date);
+          return status.toLowerCase() === workStatus;
         });
       }
 
       setFilteredData(filtered);
     },
-    [user_data, date, workStatus, isUserWFH]
+    [user_data, date, workStatus, getUserWorkStatus]
   );
 
   // Enhanced columns with WFH status
@@ -89,15 +120,17 @@ export const UserClient: React.FC<ProductsClientProps> = ({
       accessorKey: 'workStatus',
       header: 'Work Status',
       cell: ({ row }: { row: any }) => {
-        const isWfh = isUserWFH(row.original.staff_id, date);
+        const status = getUserWorkStatus(row.original.staff_id, date);
         return (
           <div
             className={cn(
               'font-medium',
-              isWfh ? 'text-green-600' : 'text-blue-600'
+              status === 'WFH' && 'text-green-600',
+              status === 'In Office' && 'text-blue-600',
+              status === 'On Leave' && 'text-orange-600'
             )}
           >
-            {isWfh ? 'WFH' : 'In Office'}
+            {status}
           </div>
         );
       }
@@ -108,7 +141,9 @@ export const UserClient: React.FC<ProductsClientProps> = ({
     filterUsers(value);
   };
 
-  const handleWorkStatusFilter = (value: 'all' | 'wfh' | 'office') => {
+  const handleWorkStatusFilter = (
+    value: 'all' | 'wfh' | 'office' | 'leave'
+  ) => {
     setWorkStatus(value);
     filterUsers('all');
   };
@@ -168,6 +203,7 @@ export const UserClient: React.FC<ProductsClientProps> = ({
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="wfh">WFH</SelectItem>
               <SelectItem value="office">In Office</SelectItem>
+              <SelectItem value="leave">On Leave</SelectItem>
             </SelectContent>
           </Select>
         </div>
