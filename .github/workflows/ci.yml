@@ -3,10 +3,10 @@ name: CI Workflow
 on:
   push:
     branches:
-      - rayTest
+      - main
   pull_request:
     branches:
-      - rayTest
+      - main
 
 jobs:
   sonarcloud:
@@ -20,10 +20,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Test and coverage
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npm test -- --coverage
+      - name: Create .env.test file
+        run: |
+          echo "DATABASE_URL=${{ secrets.TEST_DATABASE_URL }}" >> .env.test
+          echo "DIRECT_URL=${{ secrets.TEST_DIRECT_URL }}" >> .env.test
+
+      - name: Set environment variable
+        run: echo "DATABASE_URL=${{ secrets.TEST_DATABASE_URL }}" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: DATABASE_URL=${{ secrets.TEST_DATABASE_URL }} npm test -- --coverage
+
+      # - name: Test and coverage
+      #   env:
+      #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # run: npm test -- --coverage
 
       # Upload coverage report
       - name: Upload Coverage
