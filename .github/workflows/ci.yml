@@ -53,6 +53,13 @@ jobs:
           echo "GITHUB_ID=${{ secrets.GITHUB_ID }}" >> $GITHUB_ENV
           echo "GITHUB_SECRET=${{ secrets.GITHUB_SECRET }}" >> $GITHUB_ENV
 
+      - name: Load Supabase Test Database URL
+        run: |
+          if [ -f .env.test ]; then
+            export $(grep -v '^#' .env.test | xargs)
+          fi
+        shell: bash
+
       # 8. Run Jest tests (integration tests)
       - name: Run Jest Integration Tests
         run: npm run test
