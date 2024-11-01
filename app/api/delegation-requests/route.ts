@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
@@ -11,8 +12,119 @@ const delegationRequestSchema = z.object({
   status: z.string().default('pending')
 });
 
+const delegationRequestSchema = z.object({
+  staff_id: z.number(),
+  delegated_to: z.number(),
+  reason: z.string(),
+  status: z.string().default('pending')
+});
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const staff_id = searchParams.get('staff_id');
+  const delegated_to = searchParams.get('delegated_to');
+  const delegationRequestId = searchParams.get('delegationRequestId');
+
+  let delegationRequests;
+
+  if (staff_id && delegated_to) {
+    // Get specific request between staff_id and delegated_to
+    delegationRequests = await prisma.delegation_requests.findMany({
+      where: {
+        AND: [
+          { staff_id: parseInt(staff_id) },
+          { delegated_to: parseInt(delegated_to) }
+        ]
+      },
+      include: {
+        users_delegation_requests_staff_idTousers: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true
+          }
+        },
+        users_delegation_requests_delegated_toTousers: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true
+          }
+        }
+      }
+    });
+  } else if (staff_id) {
+    // Get requests made by staff_id
+    delegationRequests = await prisma.delegation_requests.findMany({
+      where: { staff_id: parseInt(staff_id) },
+      include: {
+        users_delegation_requests_staff_idTousers: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true
+          }
+        },
+        users_delegation_requests_delegated_toTousers: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true
+          }
+        }
+      }
+    });
+  } else if (delegated_to) {
+    // Get requests where user is delegated to
+    delegationRequests = await prisma.delegation_requests.findMany({
+      where: { delegated_to: parseInt(delegated_to) },
+      include: {
+        users_delegation_requests_staff_idTousers: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true
+          }
+        },
+        users_delegation_requests_delegated_toTousers: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true
+          }
+        }
+      }
+    });
+  } else if (delegationRequestId) {
+    // Get specific request
+    delegationRequests = await prisma.delegation_requests.findUnique({
+      where: { delegation_request: parseInt(delegationRequestId) },
+      include: {
+        users_delegation_requests_staff_idTousers: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true
+          }
+        },
+        users_delegation_requests_delegated_toTousers: {
+          select: {
+            staff_fname: true,
+            staff_lname: true,
+            department: true,
+            position: true
+          }
+        }
+      }
+    });
+  }
   const staff_id = searchParams.get('staff_id');
   const delegated_to = searchParams.get('delegated_to');
   const delegationRequestId = searchParams.get('delegationRequestId');
@@ -152,7 +264,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    console.error('Error processing request:', error);
+    // console.error('Error processing request:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid request data', details: error.errors },
@@ -192,11 +304,16 @@ export async function PUT(request: Request) {
             data: { status: 'approved' }
           });
 
+          if (currentRequest.delegated_to !== null) {
+            await prisma.users.update({
+              where: { staff_id: currentRequest.delegated_to },
+              data: { temp_replacement: currentRequest.staff_id }
+            });
+          } else {
+            throw new Error('Delegated_to staff_id is missing.');
+          }
+
           // Update user's temp_replacement
-          await prisma.users.update({
-            where: { staff_id: currentRequest.delegated_to },
-            data: { temp_replacement: currentRequest.staff_id }
-          });
 
           logAction = 'delegation_approve';
           break;
@@ -225,10 +342,19 @@ export async function PUT(request: Request) {
           });
 
           // Remove temp_replacement
-          await prisma.users.update({
-            where: { staff_id: currentRequest.delegated_to },
-            data: { temp_replacement: null }
-          });
+          if (currentRequest.delegated_to !== null) {
+            await prisma.users.update({
+              where: { staff_id: currentRequest.delegated_to },
+              data: { temp_replacement: null }
+            });
+          } else {
+            throw new Error('Delegated_to staff_id is missing.');
+          }
+
+          // await prisma.users.update({
+          //   where: { staff_id: currentRequest.delegated_to },
+          //   data: { temp_replacement: null }
+          // });
 
           logAction = 'redacted';
           break;
@@ -256,7 +382,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error processing request:', error);
+    // console.error('Error processing request:', error);
     return NextResponse.json(
       { error: 'An error occurred while processing your request' },
       { status: 500 }
@@ -265,11 +391,11 @@ export async function PUT(request: Request) {
 }
 
 export async function OPTIONS() {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization'
-  };
-
-  return new NextResponse(null, { headers });
+  return new NextResponse(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization'
+    }
+  });
 }

@@ -1,28 +1,37 @@
+// app/api/mail/route.ts
 import EmailTemplate from '../../../emails';
 import { Resend } from 'resend';
-import { render } from '@react-email/render';
-import { response } from '@/lib/utils';
+import { NextResponse } from 'next/server';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function POST(request: Request, res: Response) {
-  const { email, requesterName, emailSubject } = await request.json();
-
+export async function POST(request: Request) {
   try {
+    const { email, requesterName, emailSubject } = await request.json();
+
+    if (!email || !requesterName || !emailSubject) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
     const { data, error } = await resend.emails.send({
-      from: 'Test <onboarding@resend.dev>',
+      from: 'Test',
       to: [email],
       subject: emailSubject,
-      //   react: EmailTemplate({ requesterName: requesterName }),
-      html: render(EmailTemplate({ requesterName: requesterName }))
+      react: EmailTemplate({ requesterName })
     });
 
     if (error) {
-      return Response.json({ error }, { status: 500 });
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return Response.json(data);
+    return NextResponse.json(data);
   } catch (error) {
-    return Response.json({ error }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to send email' },
+      { status: 500 }
+    );
   }
 }

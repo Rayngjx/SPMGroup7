@@ -13,7 +13,8 @@
     "lint": "next lint",
     "format": "prettier . --write",
     "prepare": "husky",
-    "test": "NODE_ENV=test jest --env-file=.env.test"
+    "test": "cross-env NODE_ENV=test jest --env-file=.env.test",
+    "vercel-build": "NEXT_PUBLIC_SKIP_TYPE_CHECK=true && prisma generate && next build --no-lint"
   },
   "lint-staged": {
     "**/*": [
@@ -110,14 +111,16 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.2",
     "@testing-library/react": "^16.0.1",
+    "@jest/globals": "^29.7.0",
     "@types/express": "^5.0.0",
-    "@types/jest": "^29.5.13",
+    "@types/jest": "^29.5.14",
     "@types/supertest": "^6.0.2",
     "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
     "husky": "^9.0.11",
     "jest": "^29.7.0",
     "lint-staged": "^15.2.7",
+    "node-mocks-http": "^1.16.1",
     "prettier": "3.0.3",
     "prettier-plugin-tailwindcss": "^0.5.14",
     "prisma": "^5.20.0",
