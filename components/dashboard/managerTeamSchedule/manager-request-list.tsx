@@ -41,6 +41,9 @@ const ManagerRequestList = () => {
   const [groupedRequests, setGroupedRequests] = useState<GroupedRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [processingRequest, setProcessingRequest] = useState(false);
+  const [tempReplacementUser, setTempReplacementUser] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -60,6 +63,14 @@ const ManagerRequestList = () => {
           );
           const tempTeamRequests = await tempTeamResponse.json();
           allRequests = [...allRequests, ...tempTeamRequests];
+
+          const tempUserResponse = await fetch(
+            `/api/users?staff_id=${userData.temp_replacement}`
+          );
+          const tempUserData = await tempUserResponse.json();
+          setTempReplacementUser(
+            `${tempUserData.staff_fname} ${tempUserData.staff_lname}`
+          );
         }
 
         // 3. Fetch requests from manager's own team
@@ -246,7 +257,14 @@ const ManagerRequestList = () => {
   return (
     <Card className="w-full min-w-full border-none">
       <CardHeader className="px-6">
-        <CardTitle>Request List</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Request List</CardTitle>
+          {tempReplacementUser && (
+            <CardTitle className="text-sm text-muted-foreground">
+              You are a temporary replacement for {tempReplacementUser}
+            </CardTitle>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (

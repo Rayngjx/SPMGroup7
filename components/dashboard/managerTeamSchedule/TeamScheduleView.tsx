@@ -43,6 +43,7 @@ interface TeamMember {
   status: 'WFH' | 'Office' | 'Weekend' | 'Leave';
   upcomingWfhDates: string[];
   pendingRequests: number;
+  leaveDates: string[];
 }
 
 const ManagerTeamScheduleView = () => {
@@ -103,6 +104,15 @@ const ManagerTeamScheduleView = () => {
                   format(today, 'yyyy-MM-dd'))
           )
           .map((req: any) => req.date);
+        const leaveDates = memberRequests
+          .filter(
+            (req: any) =>
+              req.status === 'leave' &&
+              (isAfter(parseISO(req.date), today) ||
+                format(parseISO(req.date), 'yyyy-MM-dd') ===
+                  format(today, 'yyyy-MM-dd'))
+          )
+          .map((req: any) => req.date);
 
         // Count pending requests
         const pendingRequestsCount = memberRequests.filter(
@@ -115,20 +125,39 @@ const ManagerTeamScheduleView = () => {
 
         // Determine current status
         const isWeekendDay = isWeekend(date);
+
         const todayRequest = approvedWfhDates.find(
-          (reqDate) =>
+          (reqDate: string) =>
             format(new Date(reqDate), 'yyyy-MM-dd') ===
             format(date, 'yyyy-MM-dd')
         );
+
+        const leaveRequest = leaveDates.find(
+          (reqDate: string) =>
+            format(new Date(reqDate), 'yyyy-MM-dd') ===
+            format(date, 'yyyy-MM-dd')
+        );
+
+        const getStatus = (
+          leaveRequest: string | undefined,
+          isWeekendDay: boolean,
+          todayRequest: string | undefined
+        ) => {
+          if (leaveRequest) return 'Leave';
+          if (isWeekendDay) return 'Weekend';
+          if (todayRequest) return 'WFH';
+          return 'Office';
+        };
 
         return {
           staff_id: member.staff_id,
           name: `${member.staff_fname} ${member.staff_lname}`,
           department: member.department,
           position: member.position,
-          status: isWeekendDay ? 'Weekend' : todayRequest ? 'WFH' : 'Office',
+          status: getStatus(leaveRequest, isWeekendDay, todayRequest),
           upcomingWfhDates: approvedWfhDates,
-          pendingRequests: pendingRequestsCount
+          pendingRequests: pendingRequestsCount,
+          leaveDates: leaveDates
         };
       });
 
@@ -178,8 +207,11 @@ const ManagerTeamScheduleView = () => {
     const officeCount = filteredMembers.filter(
       (member) => member.status === 'Office'
     ).length;
+    const onLeaveCount = filteredMembers.filter(
+      (member) => member.status === 'Leave'
+    ).length;
 
-    return { wfhCount, officeCount, onLeaveCount: 0 };
+    return { wfhCount, officeCount, onLeaveCount };
   };
 
   if (status === 'loading') {

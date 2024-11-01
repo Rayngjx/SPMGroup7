@@ -108,6 +108,8 @@
     "zustand": "^4.4.6"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.2",
+    "@testing-library/react": "^16.0.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.13",
     "@types/supertest": "^6.0.2",

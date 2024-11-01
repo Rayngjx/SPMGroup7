@@ -25,6 +25,12 @@ export async function GET(request: Request) {
     users = await prisma.users.findUnique({
       where: { staff_id: parseInt(staff_id) }
     });
+  } else if (searchParams.get('temp_replacement')) {
+    users = await prisma.users.findMany({
+      where: {
+        temp_replacement: parseInt(searchParams.get('temp_replacement')!)
+      }
+    });
   } else {
     users = await prisma.users.findMany();
   }
