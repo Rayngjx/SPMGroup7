@@ -11,7 +11,7 @@ import {
   UserPosition
 } from '@/constants/data';
 import { cn } from '@/lib/utils';
-import { useMobileSidebar } from '@/hooks/UseMobileSideBar'; // New hook
+import { useMobileSidebar } from '@/hooks/UseMobileSidebar'; // New hook
 import { useSession, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 
