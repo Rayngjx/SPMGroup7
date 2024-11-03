@@ -28,7 +28,8 @@
     "**/*.ts",
     "**/*.tsx",
     "__test__/**/*.ts", // Add this line if your tests are TypeScript
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "__test__/api/simpletest.mjs"
   ],
   "exclude": ["node_modules"]
 }
