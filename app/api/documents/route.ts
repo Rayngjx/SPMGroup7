@@ -61,16 +61,14 @@ export async function GET(
       );
     }
 
-    const { data, error } = supabase.storage
+    const { data } = supabase.storage
       .from('testbucket')
       .getPublicUrl(requestRecord.document_url);
 
-    if (error || !data?.publicUrl) {
+    if (!data?.publicUrl) {
       return NextResponse.json(
         {
-          error: `Failed to get public URL: ${
-            error?.message || 'Unknown error'
-          }`
+          error: 'Failed to get public URL'
         },
         { status: 500 }
       );
@@ -137,17 +135,14 @@ export async function POST(
       );
     }
 
-    const { data: publicUrlData, error: urlError } = supabase.storage
+    const { data: publicUrlData } = supabase.storage
       .from('testbucket')
       .getPublicUrl(filename);
 
-    if (urlError || !publicUrlData?.publicUrl) {
-      // console.error('Error getting public URL:', urlError);
+    if (!publicUrlData?.publicUrl) {
       return NextResponse.json(
         {
-          error: `Could not get public URL: ${
-            urlError?.message || 'Unknown error'
-          }`
+          error: 'Could not get public URL'
         },
         { status: 500 }
       );

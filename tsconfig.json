@@ -26,9 +26,10 @@
   "include": [
     "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
     // "__test__/**/*.ts", // Add this line if your tests are TypeScript
     // ".next/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": ["node_modules", "__test__"]
 }
