@@ -156,7 +156,6 @@ export async function POST(
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : 'Internal Server Error';
-    // console.error('Unexpected error in document upload:', err);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
