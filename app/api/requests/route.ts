@@ -230,14 +230,6 @@ export async function PUT(request: Request) {
     }
 
     // Handle status changes
-    const { searchParams } = new URL(request.url);
-    const reportingManager = searchParams.get('reportingManager');
-
-    if (reportingManager) {
-      if (currentRequest.status === 'approved' && status === 'withdrawn') {
-        currentRequest.status = 'withdraw_pending';
-      }
-    }
 
     // Determine the log action based on current and new status
     let logAction;
@@ -267,6 +259,12 @@ export async function PUT(request: Request) {
       logAction = 'withdraw';
       newstatus = 'withdraw_pending';
     } else if (currentRequest.status === 'approved' && status === 'withdrawn') {
+      logAction = 'forced_withdraw';
+      newstatus = 'withdrawn';
+    } else if (
+      currentRequest.status === 'withdraw_pending' &&
+      status === 'withdrawn'
+    ) {
       logAction = 'forced_withdraw';
       newstatus = 'withdrawn';
     } else {
