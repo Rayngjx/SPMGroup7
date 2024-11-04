@@ -54,16 +54,16 @@ jobs:
           name: code-coverage
           path: coverage
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=SPMGroup7Key
-            -Dsonar.organization=rayngjx
-            -Dsonar.branch.name=main
+      # - name: SonarCloud Scan
+      #   uses: SonarSource/sonarcloud-github-action@master
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+      #     GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      #   with:
+      #     args: >
+      #       -Dsonar.projectKey=SPMGroup7Key
+      #       -Dsonar.organization=rayngjx
+      #       -Dsonar.branch.name=main
 
       # - name: Get Analysis ID and Check Quality Gate Status
       #   env:
