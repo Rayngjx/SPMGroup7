@@ -230,40 +230,49 @@ export async function PUT(request: Request) {
     }
 
     // Handle status changes
-    const { searchParams } = new URL(request.url);
-    const reportingManager = searchParams.get('reportingManager');
-
-    if (reportingManager) {
-      if (currentRequest.status === 'approved' && status === 'withdrawn') {
-        currentRequest.status = 'withdraw_pending';
-      }
-    }
 
     // Determine the log action based on current and new status
     let logAction;
+    let newstatus;
     if (currentRequest.status === 'pending' && status === 'approved') {
       logAction = 'approve';
+      newstatus = 'approved';
     } else if (currentRequest.status === 'pending' && status === 'rejected') {
       logAction = 'reject';
+      newstatus = 'rejected';
     } else if (
       currentRequest.status === 'withdraw_pending' &&
       status === 'rejected'
     ) {
       logAction = 'withdraw_reject';
-    } else if (
-      currentRequest.status === 'withdraw_pending' &&
-      status === 'withdrawn'
-    ) {
-      logAction = 'withdraw_approve';
-    } else if (status === 'cancelled') {
-      logAction = 'cancel';
-    } else if (status === 'withdraw_pending') {
-      logAction = 'withdraw';
+      newstatus = 'approved';
     } else if (
       currentRequest.status === 'withdraw_pending' &&
       status === 'approved'
     ) {
+      logAction = 'withdraw_approve';
+      newstatus = 'withdrawn';
+    } else if (currentRequest.status === 'pending' && status === 'cancelled') {
       logAction = 'cancel';
+      newstatus = 'cancelled';
+    } else if (
+      currentRequest.status === 'withdraw_pending' &&
+      status === 'cancelled'
+    ) {
+      logAction = 'cancel';
+      newstatus = 'approved';
+    } else if (status === 'withdraw_pending') {
+      logAction = 'withdraw';
+      newstatus = 'withdraw_pending';
+    } else if (currentRequest.status === 'approved' && status === 'withdrawn') {
+      logAction = 'forced_withdraw';
+      newstatus = 'withdrawn';
+    } else if (
+      currentRequest.status === 'withdraw_pending' &&
+      status === 'withdrawn'
+    ) {
+      logAction = 'forced_withdraw';
+      newstatus = 'withdrawn';
     } else {
       throw new Error('Invalid status transition');
     }
@@ -272,7 +281,7 @@ export async function PUT(request: Request) {
     const updatedRequest = await prisma.requests.update({
       where: { request_id: parseInt(request_id) },
       data: {
-        status,
+        status: newstatus,
         last_updated: new Date()
       }
     });

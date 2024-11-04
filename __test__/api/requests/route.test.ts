@@ -310,7 +310,7 @@ describe('Requests API Tests', () => {
 
       expect(response.status).toBe(200);
       expect(data.updatedRequest.status).toBe('withdrawn');
-      expect(data.newLog.action).toBe('withdraw_approve');
+      expect(data.newLog.action).toBe('forced_withdraw');
     });
 
     it('should handle withdrawal approval - pending', async () => {
@@ -340,7 +340,7 @@ describe('Requests API Tests', () => {
 
       expect(response.status).toBe(200);
       expect(data.updatedRequest.status).toBe('withdrawn');
-      expect(data.newLog.action).toBe('withdraw_approve');
+      expect(data.newLog.action).toBe('forced_withdraw');
     });
 
     it('should handle withdrawal approval - withdrawal rejection', async () => {
@@ -369,8 +369,38 @@ describe('Requests API Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.updatedRequest.status).toBe('rejected');
+      expect(data.updatedRequest.status).toBe('approved');
       expect(data.newLog.action).toBe('withdraw_reject');
+    });
+
+    it('should handle approved withdrawal approval - withdrawal cancelled', async () => {
+      //simiulate the request data
+      const result = await prisma.requests.create({
+        data: {
+          ...mockWithdrawPending,
+          date: new Date(mockRequest.date)
+        }
+      });
+      requestId = result.request_id;
+
+      const updateData = {
+        request_id: requestId,
+        status: 'cancelled',
+        reason: 'Need to cancel',
+        processor_id: mockRequest.processor_id
+      };
+
+      const request = {
+        json: jest.fn().mockResolvedValue(updateData),
+        url: `http://localhost:3000/api/requests?reportingManager=${updateData.processor_id}`
+      } as unknown as Request;
+
+      const response = await PUT(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.updatedRequest.status).toBe('approved');
+      expect(data.newLog.action).toBe('cancel');
     });
 
     it('should handle withdrawal approval - approved', async () => {
@@ -399,8 +429,8 @@ describe('Requests API Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.updatedRequest.status).toBe('approved');
-      expect(data.newLog.action).toBe('cancel');
+      expect(data.updatedRequest.status).toBe('withdrawn');
+      expect(data.newLog.action).toBe('withdraw_approve');
     });
 
     beforeEach(async () => {
