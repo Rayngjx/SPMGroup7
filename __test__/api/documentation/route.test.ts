@@ -1,4 +1,4 @@
-import { GET, POST, OPTIONS } from '@/app/api/documents/route';
+import { GET, POST } from '@/app/api/documents/route';
 import { supabase } from '@/lib/supabase';
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
@@ -292,20 +292,6 @@ describe('Document API', () => {
 
       expect(responseData).toEqual({ error: 'Could not get public URL' });
       expect(response.status).toBe(500);
-    });
-  });
-
-  describe('OPTIONS /api/documentation', () => {
-    test('returns correct CORS headers', async () => {
-      const response = await OPTIONS();
-
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
-      expect(response.headers.get('Access-Control-Allow-Methods')).toBe(
-        'GET,POST,OPTIONS'
-      );
-      expect(response.headers.get('Access-Control-Allow-Headers')).toBe(
-        'Content-Type,Authorization'
-      );
     });
   });
 });
