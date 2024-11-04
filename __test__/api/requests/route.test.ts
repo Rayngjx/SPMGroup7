@@ -400,7 +400,7 @@ describe('Requests API Tests', () => {
 
       expect(response.status).toBe(200);
       expect(data.updatedRequest.status).toBe('approved');
-      expect(data.newLog.action).toBe('cancel ');
+      expect(data.newLog.action).toBe('cancel');
     });
 
     it('should handle withdrawal approval - approved', async () => {
