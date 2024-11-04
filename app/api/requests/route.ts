@@ -252,9 +252,15 @@ export async function PUT(request: Request) {
     ) {
       logAction = 'withdraw_approve';
       newstatus = 'withdrawn';
-    } else if (status === 'cancelled') {
+    } else if (currentRequest.status === 'pending' && status === 'cancelled') {
       logAction = 'cancel';
       newstatus = 'cancelled';
+    } else if (
+      currentRequest.status === 'withdraw_pending' &&
+      status === 'cancelled'
+    ) {
+      logAction = 'cancel';
+      newstatus = 'approved';
     } else if (status === 'withdraw_pending') {
       logAction = 'withdraw';
       newstatus = 'withdraw_pending';
