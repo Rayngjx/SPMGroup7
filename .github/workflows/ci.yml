@@ -136,7 +136,7 @@ jobs:
               echo "Quality Gate status is not available yet, retrying in $delay seconds..."
             fi
 
-            count=$((count+1))
+            count=$((count+1)) 
             sleep $delay
           done
 
