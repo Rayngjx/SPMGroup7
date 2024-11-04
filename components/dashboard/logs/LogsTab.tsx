@@ -181,6 +181,7 @@ export default function LogsTab() {
         return 'bg-green-500';
       case 'reject':
       case 'withdraw_reject':
+      case 'forced_withdraw':
         return 'bg-red-500';
       case 'withdraw':
       case 'withdraw_pending':

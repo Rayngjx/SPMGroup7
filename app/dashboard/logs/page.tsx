@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LogsDeleTab } from '@/components/dashboard/logs/LogsDeleTab';
 import LogsTab from '@/components/dashboard/logs/LogsTab';
