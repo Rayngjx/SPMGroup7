@@ -1,3 +1,6 @@
+/**
+ * @jest-environment node
+ */
 import { GET, POST } from '@/app/api/documents/route';
 import { supabase } from '@/lib/supabase';
 import { db } from '@/lib/db';
