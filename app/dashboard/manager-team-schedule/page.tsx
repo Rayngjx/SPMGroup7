@@ -23,7 +23,7 @@ export default async function ManagerTeamSchedulePage() {
         <div className="min-w-screen-sm mx-auto">
           <div className="flex items-center justify-between space-y-2">
             <h2 className="p-5 text-3xl font-bold tracking-tight">
-              {name}`&apos;`s Team
+              {name}&apos;s Team
             </h2>
           </div>
 
