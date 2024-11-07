@@ -1,71 +1,104 @@
-# Project Setup
+# Employee Time-Off Request System
 
-Follow these steps to get the project up and running:
+## Live Demo
 
-### 1. Install Dependencies
+The application is deployed and accessible at: https://spm-group7.vercel.app/
 
-```bash
-npm install
-```
+## Important Note for Login
 
-This will install all necessary dependencies for the project.
+For testing purposes, the password for each user account is set to be the same as their username, which is the staff_id, to access Olivia (140015), you would key in 140015 in the username and password.
 
-### 2. Configure Environment Variables
+Some accounts to test:
+Staff: 140015
+HR/Director: 160008
+HR Staff: 160015
+Manager: 140894
 
-Create a `.env` file in the root directory and add the following environment variable, replacing `<databaseurl>` with your actual database URL:
+## Project Overview
 
-```
-DATABASE_URL = "<databaseurl>"
-```
+This is an Employee Time-Off Request Management System built with Next.js and Supabase. The system allows employees to:
 
-### 3. Pull Database from NeonTech
+- View their work schedule
+- Submit time-off requests
+- Track request status
+- Manage approvals/rejections
+- View request history
+- Delegate approval authorities
 
-```bash
-npx prisma db pull
-```
+## Key Features
 
-This command pulls the current database schema from NeonTech using Prisma.
+- User authentication and role-based access control
+- Request management workflow (submit, approve, reject, withdraw, cancel)
+- Viewing of own schedule, team schedule, department schedule or organisation schedule depending on role
+- Comprehensive logging system for an audit
+- Document attachment support for requests
+- Transferring of role-based access control permissions
 
-### 4. Generate Prisma Client
+## Technical Stack
 
-```bash
-npx prisma generate
-```
+- Frontend: Next.js
+- Database: Supabase
+- ORM: Prisma
+- Authentication: NextAuth.js
+- File Storage: Supabase
 
-This will generate the Prisma client based on the schema pulled from the database.
+## Database Schema
 
-### 5. Run the Application
+The system uses the following main entities:
 
-```bash
-npm run dev
-```
+- Users (staff information and hierarchy)
+- Requests (time-off requests)
+- Logs (tracking requests)
+- Delegation Requests (approval authority delegation)
+- Delegation Logs (tracking delegation requests)
 
-Starts the development server for the web application.
+## Environment Variables
 
----
-
-# Committing Code
-
-This project uses **Husky** for linting code before commits (it's like a spell-check for your code). Sometimes, even if your code runs fine, you might encounter linting errors.
-
-If you're having trouble committing due to these lint checks, you can bypass the linting with:
-
-```bash
-git commit --no-verify -m "<message>"
-```
-
----
-
-# Working with Data
-
-The CRUD (Create, Read, Update, Delete) functions are available under:
+Create a `.env` file in the root directory with the following format:
 
 ```
-@/app/api/crudFunctions
+NEXT_PUBLIC_BASE_URL=your_base_url
+NEXTAUTH_SECRET=your_nextauth_secret
+GITHUB_ID=your_github_id
+GITHUB_SECRET=your_github_secret
+DATABASE_URL=your_database_url
+DIRECT_URL=your_direct_database_url
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
-Each table in the database has its own set of CRUD functions. Choose the appropriate ones based on your needs.
+## Getting Started
 
-If you need help with a specific function or have any questions, feel free to reach out. Additionally, when using these functions, keep in mind whether you're working in a **server component** or a **client component**.
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up environment variables as described above
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+5. Access the application at `http://localhost:3000`
 
-(For guidance on this, you might need to ask ChatGPT—I'm still learning too!)
+## Database Setup
+
+1. Make sure PostgreSQL is installed and running
+2. Run Prisma migrations:
+   ```bash
+   npx prisma db pull
+   ```
+   Then run this to generate the Typescript types.
+   ```bash
+   npx prisma generate
+   ```
+
+## Testing
+
+Login with any user account using the username as both the username and password.
+
+## Contributors
+
+Section G1
+Group 7
