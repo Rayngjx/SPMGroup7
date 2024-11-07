@@ -84,7 +84,7 @@ NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 ## Database Setup
 
-1. Make sure PostgreSQL is installed and running
+1. Make sure you have set up your Supabase project and database and its up and running
 2. Run Prisma migrations:
    ```bash
    npx prisma db pull
