@@ -2,22 +2,21 @@ import { auth } from '@/auth';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import PageContainer from '@/components/layout/page-container';
 import { UserClient } from '@/components/tables/staff-tables/client';
-import { db } from '@/lib/db';
-import React from 'react';
-import { cache } from 'react';
 
 const breadcrumbItems = [
   { title: 'Dashboard', link: '/dashboard' },
   { title: 'Staff', link: '/dashboard/staff' }
 ];
 
-export default async function page() {
+export default async function Staff() {
   let getUsers;
   let getRequests;
   try {
-    let data = await fetch('http://localhost:3000/api/users');
+    const data = await fetch(`https://spm-group7.vercel.app/api/users`);
     getUsers = await data.json();
-    let request_data = await fetch('http://localhost:3000/api/requests');
+    const request_data = await fetch(
+      `https://spm-group7.vercel.app/api/requests`
+    );
     getRequests = await request_data.json();
   } catch (error) {
     console.error(error);

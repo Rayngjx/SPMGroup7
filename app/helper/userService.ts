@@ -3,7 +3,7 @@ import { users } from '@prisma/client';
 // userService.js
 export async function getUser(userId: users['staff_id']) {
   const response = await fetch(
-    `http://localhost:3000/api/users?staff_id=${userId}`
+    `https://spm-group7.vercel.app/api/users?staff_id=${userId}`
   );
   const user = await response.json();
   return user;

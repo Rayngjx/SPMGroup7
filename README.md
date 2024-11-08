@@ -37,7 +37,7 @@ This is an Employee Time-Off Request Management System built with Next.js and Su
 ## Technical Stack
 
 - Frontend: Next.js
-- Database: Supabase
+- Database: PostgreSQL - Supabase
 - ORM: Prisma
 - Authentication: NextAuth.js
 - File Storage: Supabase
@@ -92,6 +92,10 @@ NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
    Then run this to generate the Typescript types.
    ```bash
    npx prisma generate
+   ```
+3. See table data
+   ```bash
+   npx prisma studio
    ```
 
 ## Testing

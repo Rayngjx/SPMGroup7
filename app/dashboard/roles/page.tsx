@@ -25,7 +25,7 @@ export default async function page() {
 
   const session = await auth();
 
-  const data = await fetch('http://localhost:3000/api/roles');
+  const data = await fetch('https://spm-group7.vercel.app/api/roles');
   const roles = await data.json();
 
   let isSeniorOrHR = false;

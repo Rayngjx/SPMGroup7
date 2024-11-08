@@ -79,7 +79,7 @@ export default function Component_Roles({ dataRoles }: { dataRoles: any }) {
   const handleAddRole = async () => {
     if (newRole.name) {
       try {
-        const res = await fetch('http://localhost:3000/api/roles', {
+        const res = await fetch('https://spm-group7.vercel.app/api/roles', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -115,7 +115,7 @@ export default function Component_Roles({ dataRoles }: { dataRoles: any }) {
     if (newRole.name && roleToEdit) {
       try {
         console.log('Role to edit:', newRole.name);
-        const res = await fetch(`http://localhost:3000/api/roles`, {
+        const res = await fetch(`/api/roles`, {
           method: 'PUT', // PUT method for updating an existing role
           headers: {
             'Content-Type': 'application/json'
@@ -159,12 +159,9 @@ export default function Component_Roles({ dataRoles }: { dataRoles: any }) {
   const confirmDeleteRole = async () => {
     if (roleToDelete) {
       try {
-        const res = await fetch(
-          `http://localhost:3000/api/roles?role_id=${roleToDelete.role_id}`,
-          {
-            method: 'DELETE'
-          }
-        );
+        const res = await fetch(`/api/roles?role_id=${roleToDelete.role_id}`, {
+          method: 'DELETE'
+        });
 
         if (res.ok) {
           setIsDeleteDialogOpen(false);
