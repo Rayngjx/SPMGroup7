@@ -3,14 +3,14 @@ name: CI Workflow
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   sonarcloud:
-    name: Test
+    name: SonarCloud Scan Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -19,11 +19,208 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: ./frontend
 
-      - name: Trigger Vercel Deployment
+      - name: Create .env.test file
+        run: |
+          echo "DATABASE_URL=${{ secrets.TEST_DATABASE_URL }}" >> .env.test
+          echo "DIRECT_URL=${{ secrets.TEST_DIRECT_URL }}" >> .env.test
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env.test
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env.test
+          echo "NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY }}" >> .env.test
+
+      - name: Set environment variable
+        run: echo "DATABASE_URL=${{ secrets.TEST_DATABASE_URL }}" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: DATABASE_URL=${{ secrets.TEST_DATABASE_URL }} npm test -- --coverage
+
+      # - name: Test and coverage
+      #   env:
+      #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # run: npm test -- --coverage
+
+      # Upload coverage report
+      - name: Upload Coverage
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage
+          path: coverage
+
+      # Download coverage artifact for SonarCloud
+      - name: Download Coverage Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: code-coverage
+          path: coverage
+
+      # - name: SonarCloud Scan
+      #   uses: SonarSource/sonarcloud-github-action@master
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+      #     GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      #   with:
+      #     args: >
+      #       -Dsonar.projectKey=SPMGroup7Key
+      #       -Dsonar.organization=rayngjx
+      #       -Dsonar.branch.name=main
+
+      # - name: Get Analysis ID and Check Quality Gate Status
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+      #   run: |
+      #     max_retries=3   # Reduced retry count for faster checks
+      #     delay=5         # Reduced delay for quicker retries
+      #     count=0
+
+      #     # Fetch the latest analysis ID for the branch
+      #     analysisId=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/project_analyses/search?project=SPMGroup7Key&branch=main" | jq -r '.analyses[0].key')
+      #     echo "Analysis ID: $analysisId"
+
+      #     if [ -z "$analysisId" ] || [ "$analysisId" == "null" ]; then
+      #       echo "Failed to retrieve analysis ID."
+      #       exit 1
+      #     fi
+
+      #     while [ "$count" -lt "$max_retries" ]; do
+      #       # Check the task status
+      #       taskStatus=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/ce/task?id=$analysisId" | jq -r .task.status)
+      #       echo "Attempt $((count+1)): Analysis task status: $taskStatus"
+
+      #       if [ "$taskStatus" == "SUCCESS" ]; then
+      #         # If analysis is complete, check the Quality Gate status
+      #         status=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=SPMGroup7Key" | jq -r .projectStatus.status)
+      #         echo "Quality Gate status: $status"
+
+      #         if [ "$status" == "OK" ]; then
+      #           echo "Quality Gate passed"
+      #           exit 0
+      #         elif [ "$status" == "ERROR" ]; then
+      #           echo "Quality Gate failed"
+      #           exit 1
+      #         else
+      #           echo "Quality Gate status is not available yet, retrying in $delay seconds..."
+      #         fi
+      #       else
+      #         echo "Analysis not complete yet, retrying in $delay seconds..."
+      #       fi
+
+      #       count=$((count+1))
+      #       sleep $delay
+      #     done
+
+      #     echo "Quality Gate status did not become available in time."
+      #     exit 1
+
+      - name: Check Quality Gate for branches
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+        run: |
+          max_retries=3   # Adjust retry count for faster checks
+          delay=5         # Adjust delay for quicker retries
+          count=0
+
+          while [ "$count" -lt "$max_retries" ]; do
+            # Fetch the Quality Gate status
+            status=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=SPMGroup7Key&branch=main" | jq -r .projectStatus.status)
+            echo "Attempt $((count+1)): Quality Gate status: $status"
+
+            if [ "$status" == "OK" ]; then
+              echo "Quality Gate passed"
+              exit 0
+            elif [ "$status" == "ERROR" ]; then
+              echo "Quality Gate failed"
+              exit 1
+            else
+              echo "Quality Gate status is not available yet, retrying in $delay seconds..."
+            fi
+
+            count=$((count+1)) 
+            sleep $delay
+          done
+
+          echo "Quality Gate status did not become available in time."
+          exit 1
+      - name: Trigger Vercel Deploy
         if: success()
         env:
           DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
         run: |
           curl -X POST "$DEPLOY_HOOK_URL"
+  # build-and-test:
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     # 1. Checkout the code from the repository
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+
+  #     # 2. Set up Node.js (version 18.18.2)
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v2
+  #       with:
+  #         node-version: '18.18.2'
+  #         cache: 'npm'
+
+  #     # 3. Cache node_modules to speed up build times
+  #     - name: Cache node_modules
+  #       uses: actions/cache@v2
+  #       with:
+  #         path: ~/.npm
+  #         key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-node-
+
+  #     # 4. Install dependencies
+  #     - name: Install dependencies
+  #       run: npm install
+
+  #     # 5. Run ESLint for code linting
+  #     - name: Run Lint
+  #       run: npm run lint
+
+  #     # 6. Run Prettier to check code formatting
+  #     - name: Run Prettier
+  #       run: npm run prettier -- --check
+
+  #     # 7. Set environment variables from GitHub Secrets
+  #     - name: Set environment variables
+  #       run: |
+  #         echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
+  #         echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> $GITHUB_ENV
+  #         echo "GITHUB_ID=${{ secrets.GITHUB_ID }}" >> $GITHUB_ENV
+  #         echo "GITHUB_SECRET=${{ secrets.GITHUB_SECRET }}" >> $GITHUB_ENV
+
+  #     # 8. Run Jest tests (integration tests)
+  #     - name: Run Jest Integration Tests
+  #       run: npm run test
+
+  #     # 9. [Optional] If you need code coverage
+  #     - name: Upload Coverage
+  #       if: success()
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: code-coverage
+  #         path: coverage
+
+#            -Dsonar.exclusions=__test__/**,tests/**,test/**
+
+# jobs:
+#   sonarcloud:
+#     name: SonarCloud Scan Test
+#     runs-on: ubuntu-latest
+#     steps:
+#       # [Include the previous sonarcloud job steps here as shown above]
+
+#   deploy:
+#     name: Deploy to Vercel
+#     runs-on: ubuntu-latest
+#     needs: sonarcloud  # This makes the deployment conditional on the sonarcloud job passing
+#     if: success()  # This ensures that deployment only runs if all previous jobs succeeded
+#     steps:
+#       - name: Deploy to Vercel
+#         env:
+#           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+#         run: |
+#           # Use the Vercel CLI to deploy
+#           npx vercel --prod --token=$VERCEL_TOKEN
